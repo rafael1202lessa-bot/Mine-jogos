@@ -10,8 +10,8 @@ st.set_page_config(page_title="EXV Portal de Mini-Games", page_icon="🎮", layo
 
 # --- CONFIGURAÇÃO DO SUPABASE ---
 # Use as suas credenciais reais (as do Quem é Quem ou as principais)
-URL_SUPABASE = "https://tuymyyxguujeuxwgrssm.supabase.co"
-CHAVE_SUPABASE = "sb_publishable_mE_GPQgHRnkF1bp241SkyA_Ijynueb5"
+URL_SUPABASE = "https://ldjtqgeyorkzbvuichjj.supabase.co"
+CHAVE_SUPABASE = "sb_publishable_ZWY9Hp6kQrhOzff6xc_DrA_8TlnrqQ_"
 
 @st.cache_resource
 def conectar_supabase():
