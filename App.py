@@ -158,11 +158,8 @@ else:
 
     st.title("🎮 EXV Portal de Mini-Games")
     
-    jogo_escolhido = st.selectbox(
-        "Escolha o modo de jogo:",
-        ["Selecione...", "🔤 Jogo da Forca", "👤 Cara a Cara (Multiplayer)", "🕵️‍♂️ Quem é Quem? (Walkie-Talkie)", "🃏 uno exv (multiplayer) "]
-    )
-    
+    jogo_escolhido = st.selectbox("Escolha o Jogo:", ["🔤 Jogo da Forca", "👤 Cara a Cara (Multiplayer)", "🕵️ Quem é Quem? (Walkie-Talkie)", "🃏 Jogo do UNO (Multiplayer)"])
+       
     # ================= JOGO 1: FORCA =================
     if jogo_escolhido == "🔤 Jogo da Forca":
         st.subheader("🔤 Jogo da Forca EXV")
