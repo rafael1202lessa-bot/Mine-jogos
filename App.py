@@ -12,12 +12,12 @@ jogo_escolhido = st.selectbox(
 )
 
 # -------------------------------------------------------------------
-# LÓGICA DO JOGO DA VELHA
+# LÓGICA DO JOGO DA VELHA VERSÃO HASHTAG (#)
 # -------------------------------------------------------------------
 if jogo_escolhido == "❌ Jogo da Velha":
     st.header("❌ Jogo da Velha ⭕")
     
-    # Inicializa o tabuleiro na memória do Streamlit
+    # Inicializa o tabuleiro na memória
     if "tabuleiro" not in st.session_state:
         st.session_state.tabuleiro = [" "] * 9
         st.session_state.turno = "X"
@@ -37,7 +37,6 @@ if jogo_escolhido == "❌ Jogo da Velha":
             return "Empate"
         return None
 
-    # Função chamada quando um botão do tabuleiro é clicado
     def clique_botao(index):
         if st.session_state.tabuleiro[index] == " " and not st.session_state.vencedor:
             st.session_state.tabuleiro[index] = st.session_state.turno
@@ -47,15 +46,30 @@ if jogo_escolhido == "❌ Jogo da Velha":
             else:
                 st.session_state.turno = "O" if st.session_state.turno == "X" else "X"
 
-    # Criando o tabuleiro 3x3 com botões do Streamlit
-    grid = [st.columns(3) for _ in range(3)]
-    for i in range(3):
-        for j in range(3):
-            index = i * 3 + j
-            txt_botao = st.session_state.tabuleiro[index]
-            # Se o espaço estiver vazio, exibe um espaço em branco no botão
-            label = txt_botao if txt_botao != " " else "  "
-            grid[i][j].button(label, key=f"btn_{index}", on_click=clique_botao, args=(index,), use_container_width=True)
+    # --- MONTAGEM DO TABULEIRO # ---
+    # Linha 1 do #
+    col1, col2, col3 = st.columns(3)
+    with col1: st.button(st.session_state.tabuleiro[0] if st.session_state.tabuleiro[0] != " " else "  ", key="b0", on_click=clique_botao, args=(0,), use_container_width=True)
+    with col2: st.button(st.session_state.tabuleiro[1] if st.session_state.tabuleiro[1] != " " else "  ", key="b1", on_click=clique_botao, args=(1,), use_container_width=True)
+    with col3: st.button(st.session_state.tabuleiro[2] if st.session_state.tabuleiro[2] != " " else "  ", key="b2", on_click=clique_botao, args=(2,), use_container_width=True)
+    
+    st.markdown("---") # Linha horizontal do #
+
+    # Linha 2 do #
+    col4, col5, col6 = st.columns(3)
+    with col4: st.button(st.session_state.tabuleiro[3] if st.session_state.tabuleiro[3] != " " else "  ", key="b3", on_click=clique_botao, args=(3,), use_container_width=True)
+    with col5: st.button(st.session_state.tabuleiro[4] if st.session_state.tabuleiro[4] != " " else "  ", key="b4", on_click=clique_botao, args=(4,), use_container_width=True)
+    with col6: st.button(st.session_state.tabuleiro[5] if st.session_state.tabuleiro[5] != " " else "  ", key="b5", on_click=cl_click_botao, args=(5,), use_container_width=True)
+    
+    st.markdown("---") # Outra linha horizontal do #
+
+    # Linha 3 do #
+    col7, col8, col9 = st.columns(3)
+    with col7: st.button(st.session_state.tabuleiro[6] if st.session_state.tabuleiro[6] != " " else "  ", key="b6", on_click=clique_botao, args=(6,), use_container_width=True)
+    with col8: st.button(st.session_state.tabuleiro[7] if st.session_state.tabuleiro[7] != " " else "  ", key="b7", on_click=clique_botao, args=(7,), use_container_width=True)
+    with col9: st.button(st.session_state.tabuleiro[8] if st.session_state.tabuleiro[8] != " " else "  ", key="b8", on_click=clique_botao, args=(8,), use_container_width=True)
+    
+    st.write("") # Espaço em branco
 
     # Mostra o status do jogo
     if st.session_state.vencedor:
@@ -66,13 +80,13 @@ if jogo_escolhido == "❌ Jogo da Velha":
     else:
         st.write(f"Vez do jogador: **{st.session_state.turno}**")
 
-    # Botão para reiniciar o jogo
-    if st.button("Reiniciar Jogo da Velha"):
+    # Botão para reiniciar
+    if st.button("Reiniciar Jogo"):
         st.session_state.tabuleiro = [" "] * 9
         st.session_state.turno = "X"
         st.session_state.vencedor = None
         st.rerun()
-
+                                                                                                                                                 
 # -------------------------------------------------------------------
 # LÓGICA DO JOGO DA FORCA (ESPAÇO RESERVADO)
 # -------------------------------------------------------------------
