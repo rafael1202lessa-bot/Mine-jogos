@@ -5,8 +5,6 @@ st.set_page_config(page_title="EXV Mini-Games", page_icon="🎮", layout="center
 st.title("🎮 EXV Mini-Games")
 st.write("Bem-vindo ao portal de jogos da turma! Escolha um jogo no menu abaixo.")
 
----
-
 # Menu de seleção de jogos
 jogo_escolhido = st.selectbox(
     "O que você quer jogar agora?",
