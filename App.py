@@ -239,62 +239,7 @@ else:
             st.session_state.letras_erradas = set()
             st.session_state.tentativas_restantes = 6
             st.rerun()
-        
-    # ================= JOGO 2: CARA A CARA =================
-    elif jogo_escolhido == "👤 Cara a Cara (Multiplayer)":
-        st.subheader("👤 Cara a Cara EXV — Tabuleiro Clássico")
-        
-        personagens_oficiais = [
-            "TRISTAN", "BOBBY", "LINDA", "KELLEN", "FLOYD", "CLEO", "TODD", "FRED",
-            "LOLA", "CHUCK", "RENATA", "ALINE", "ANDY", "SAMUEL", "GADI", "GIGI",
-            "MELISSA", "RONI", "LEO", "DENIS", "ANA", "SUZI", "MAUDE", "SÔNIA"
-        ]
-
-        # 1. MENU PRINCIPAL DO JOGO (Se ainda não escolheu o modo)
-        if st.session_state.cara_modo is None:
-            st.write("### Escolha o Modo de Jogo:")
-            col_m1, col_m2 = st.columns(2)
-            with col_m1:
-                if st.button("🤖 Jogar Contra o Bot (Solo)", use_container_width=True):
-                    st.session_state.cara_modo = "solo"
-                    st.session_state.bot_suspeito = random.choice(personagens_oficiais)
-                    st.rerun()
-            with col_m2:
-                if st.button("👥 Jogar com Amigo (Online)", use_container_width=True):
-                    st.session_state.cara_modo = "online"
-                    st.rerun()
-
-        # 2. SE O UTILIZADOR CLICOU EM "JOGAR CONTRA O BOT"
-        elif st.session_state.cara_modo == "solo":
-            st.write("🤖 Modo Solo contra o Bot")
-            if st.sidebar.button("🏳️ Sair do Jogo Solo"):
-                st.session_state.cara_modo = None
-                st.session_state.eliminados = set()
-                st.rerun()
-
-            st.markdown("### 🎴 Seu Tabuleiro de Suspeitos")
-            colunas_tabuleiro = st.columns(4)
-            for indice, nome_suspeito in enumerate(personagens_oficiais):
-                com_coluna = colunas_tabuleiro[indice % 4]
-                with com_coluna:
-                    esta_eliminado = nome_suspeito in st.session_state.eliminados
-                    if esta_eliminado:
-                        st.markdown(f"<div style='opacity: 0.2; text-align: center; font-size: 24px; padding: 10px; background: #333; border-radius: 5px;'>❌<br><b style='font-size:12px;'>{nome_suspeito}</b></div>", unsafe_url_allowed=True)
-                        if st.button("🔼 Levantar", key=f"up_solo_{nome_suspeito}_{indice}", use_container_width=True):
-                            st.session_state.eliminados.remove(nome_suspeito)
-                            st.rerun()
-                    else:
-                        st.markdown(
-                    f"<div style='border: 2px solid #FFA500; padding: 10px;'><b>{nome_suspeito}</b></div>", unsafe_allow_html=True)
-                if st.button("🔻 Abaixar", key=f"dw_solo_{nome_suspeito}_{indice}", use_container_width=True):
-                            st.session_state.eliminados.add(nome_suspeito)
-                            st.rerun()
-
-            st.write("---")
-            st.markdown("### 🔍 Dar Palpite Final")
-            chute = st.selectbox("Quem você acha que o Bot escolheu?", ["Selecione..."] + personagens_oficiais)
-            if st.button("Confirmar Palpite! 🎯", use_container_width=True):
-              
+                  
         # ================= JOGO 2: CARA A CARA =================
     elif jogo_escolhido == "👤 Cara a Cara (Multiplayer)":
         st.subheader("👤 Cara a Cara EXV — Tabuleiro Clássico")
