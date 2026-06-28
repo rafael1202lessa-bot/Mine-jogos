@@ -313,7 +313,7 @@ else:
                 col_sala1, col_sala2 = st.columns(2)
                 with col_sala1:
     # ================= JOGO 2: CARA A CARA =================
-    elif jogo_escolhido == "👤 Cara a Cara (Multiplayer)":
+    with jogo_escolhido == "👤 Cara a Cara (Multiplayer)":
         st.subheader("👤 Cara a Cara EXV — Tabuleiro com Fotos")
         
         # Estrutura de navegação (O erro de SyntaxError acontecia aqui por falta de alinhamento)
