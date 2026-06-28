@@ -128,14 +128,16 @@ else:
     st.title("🎮 EXV Portal de Mini-Games")
     st.write(f"Olá, {st.session_state.username_atual}!")
     
+    # O menu de seleção cria a variável 'jogo_escolhido' de forma segura aqui dentro
     jogo_escolhido = st.selectbox(
         "Escolha o modo de jogo:",
         ["Selecione...", "🔤 Jogo da Forca", "👤 Cara a Cara (Multiplayer)"]
     )
     
+    # TODA a lógica dos jogos deve ficar recuada (com tab) dentro deste ELSE
     if jogo_escolhido == "🔤 Jogo da Forca":
         st.subheader("🔤 Jogo da Forca EXV")
-        st.write("(Sua lógica da forca funciona aqui normalmente!)")
+        # (Aqui você pode colar o código completo daquela sua Forca com as funções de chutar letras)
         
     elif jogo_escolhido == "👤 Cara a Cara (Multiplayer)":
         st.subheader("👤 Cara a Cara EXV")
