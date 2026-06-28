@@ -294,24 +294,7 @@ else:
             st.markdown("### 🔍 Dar Palpite Final")
             chute = st.selectbox("Quem você acha que o Bot escolheu?", ["Selecione..."] + personagens_oficiais)
             if st.button("Confirmar Palpite! 🎯", use_container_width=True):
-                if chute == st.session_state.bot_suspeito:
-                    st.balloons()
-                    st.success(f"🏆 PARABÉNS! O Bot era o **{st.session_state.bot_suspeito}**!")
-                else:
-                    st.error(f"❌ Errou! O Bot não é o {chute}. Continue investigando!")
-
-        # 3. SE O UTILIZADOR CLICOU EM "JOGAR COM AMIGO"
-        elif st.session_state.cara_modo == "online":
-            if st.sidebar.button("↩️ Mudar de Modo (Voltar)"):
-                st.session_state.cara_modo = None
-                st.session_state.sala_id = None
-                st.session_state.meu_numero = None
-                st.session_state.eliminados = set()
-                st.rerun()
-                
-            if st.session_state.sala_id is None:
-                col_sala1, col_sala2 = st.columns(2)
-                with col_sala1:
+              
     # ================= JOGO 2: CARA A CARA =================
     with jogo_escolhido == "👤 Cara a Cara (Multiplayer)":
         st.subheader("👤 Cara a Cara EXV — Tabuleiro com Fotos")
