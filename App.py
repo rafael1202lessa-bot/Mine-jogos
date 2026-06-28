@@ -1,16 +1,76 @@
 import streamlit as st
+from supabase import create_client, Client
 
 st.set_page_config(page_title="EXV Mini-Games", page_icon="🎮", layout="centered")
 
-st.title("🎮 EXV Mini-Games")
-st.write("Bem-vindo ao portal de jogos da turma! Escolha um jogo no menu abaixo.")
+# 1. Configuração de conexão com o seu Supabase
+# Substitua pelas suas credenciais reais do projeto do Chat EXV!
+URL_SUPABASE = "SUA_URL_DO_SUPABASE_AQUI"
+CHAVE_SUPABASE = "SUA_CHAVE_ANON_DO_SUPABASE_AQUI"
 
-# Menu de seleção de jogos
-jogo_escolhido = st.selectbox(
-    "O que você quer jogar agora?",
-    ["Selecione um jogo...", "❌ Jogo da Velha", "🔤 Jogo da Forca", "💡 Meu Jogo Inventado"]
-)
+@st.cache_resource
+def conectar_supabase():
+    return create_client(URL_SUPABASE, CHAVE_SUPABASE)
 
+supabase = conectar_supabase()
+
+# 2. Inicializa a sessão do usuário na memória do app
+if "usuario_logado" not in st.session_state:
+    st.session_state.usuario_logado = None
+if "username_atual" not in st.session_state:
+    st.session_state.username_atual = None
+
+# --- TELA DE LOGIN ---
+if st.session_state.usuario_logado is None:
+    st.title("🔑 Login - EXV Mini-Games")
+    st.write("Entre com a sua conta do Chat EXV para jogar e salvar seus pontos!")
+
+    usuario = st.text_input("Usuário / Nickname:")
+    senha = st.text_input("Senha:", type="password")
+
+    if st.button("Entrar"):
+        if usuario and osenha:
+            try:
+                # Busca o usuário na sua tabela de perfis (ajuste o nome da tabela se for diferente!)
+                resposta = supabase.table("perfis_exv").select("*").eq("username", usuario).eq("senha", senha).execute()
+                
+                if len(resposta.data) > 0:
+                    st.session_state.usuario_logado = resposta.data[0]["id"] # Salva o ID do jogador
+                    st.session_state.username_atual = resposta.data[0]["username"]
+                    st.success(f"🎉 Bem-vindo, {usuario}!")
+                    st.rerun()
+                else:
+                    st.error("Usuário ou senha incorretos. Tente novamente!")
+            except Exception as e:
+                st.error(f"Erro ao conectar ao banco de dados: {e}")
+        else:
+            st.warning("Preencha todos os campos!")
+
+# --- ÁREA LOGADA (SÓ ENTRA SE O LOGIN FOR SUCESSO) ---
+else:
+    st.sidebar.write(f"🎮 Jogador: **{st.session_state.username_atual}**")
+    if st.sidebar.button("Sair / Logout"):
+        st.session_state.usuario_logado = None
+        st.session_state.username_atual = None
+        st.rerun()
+
+    st.title("🎮 EXV Portal de Mini-Games")
+    st.write(f"Olá {st.session_state.username_atual}! Você está pronto para o multiplayer?")
+
+    # Menu de seleção de jogos
+    jogo_escolhido = st.selectbox(
+        "Escolha o modo de jogo:",
+        ["Selecione...", "🔤 Jogo da Forca", "⚔️ Próximo Jogo (Multiplayer)"]
+    )
+
+    if jogo_escolhido == "🔤 Jogo da Forca":
+        st.write("Aqui vai o código da sua Forca que já criamos!")
+        # (Depois colamos a lógica da forca aqui dentro)
+
+    elif jogo_escolhido == "⚔️ Próximo Jogo (Multiplayer)":
+        st.header("⚔️ Arena Multiplayer")
+        st.write("Espaço reservado para o jogo síncrono por turnos!")
+                    
 # -------------------------------------------------------------------
 # LÓGICA DO JOGO DA VELHA VERSÃO HASHTAG (#)
 # -------------------------------------------------------------------
