@@ -1,10 +1,11 @@
 import streamlit as st
 from supabase import create_client, Client
+import os
 
 st.set_page_config(page_title="EXV Mini-Games", page_icon="🎮", layout="centered")
 
-# 1. Configuração de conexão com o seu Supabase
-# Substitua pelas suas credenciais reais do projeto do Chat EXV!
+# --- CONFIGURAÇÃO DO SUPABASE ---
+# Substitua pelas suas credenciais reais do projeto!
 URL_SUPABASE = "https://ldjtqgeyorkzbvuichjj.supabase.co"
 CHAVE_SUPABASE = "sb_publishable_ZWY9Hp6kQrhOzff6xc_DrA_8TlnrqQ_"
 
@@ -14,39 +15,109 @@ def conectar_supabase():
 
 supabase = conectar_supabase()
 
-# 2. Inicializa a sessão do usuário na memória do app
+# Inicializa as variáveis de sessão
 if "usuario_logado" not in st.session_state:
     st.session_state.usuario_logado = None
 if "username_atual" not in st.session_state:
     st.session_state.username_atual = None
+if "tela_atual" not in st.session_state:
+    st.session_state.tela_atual = "login"
 
-# --- TELA DE LOGIN ---
+# --- FLUXO DE AUTENTICAÇÃO ---
 if st.session_state.usuario_logado is None:
-    st.title("🔑 Login - EXV Mini-Games")
-    st.write("Entre com a sua conta do Chat EXV para jogar e salvar seus pontos!")
+    
+    # --- TELA DE LOGIN ---
+    if st.session_state.tela_atual == "login":
+        st.title("🔑 Login - EXV Mini-Games")
+        st.write("Entre com a sua conta de jogos!")
 
-    usuario = st.text_input("Usuário / Nickname:")
-    senha = st.text_input("Senha:", type="password")
+        usuario = st.text_input("Usuário / Nickname:", key="login_user").strip()
+        senha = st.text_input("Senha:", type="password", key="login_pass")
 
-    if st.button("Entrar"):
-        if usuario and osenha:
-            try:
-                # Busca o usuário na sua tabela de perfis (ajuste o nome da tabela se for diferente!)
-                resposta = supabase.table("perfis_exv").select("*").eq("username", usuario).eq("senha", senha).execute()
-                
-                if len(resposta.data) > 0:
-                    st.session_state.usuario_logado = resposta.data[0]["id"] # Salva o ID do jogador
-                    st.session_state.username_atual = resposta.data[0]["username"]
-                    st.success(f"🎉 Bem-vindo, {usuario}!")
-                    st.rerun()
+        if st.button("Entrar"):
+            if usuario and senha:
+                try:
+                    # Busca na tabela exclusiva de jogos
+                    resposta = supabase.table("perfis_jogos_exv").select("*").eq("username", usuario).eq("senha", senha).execute()
+                    
+                    if len(resposta.data) > 0:
+                        st.session_state.usuario_logado = resposta.data[0]["id"]
+                        st.session_state.username_atual = resposta.data[0]["username"]
+                        st.success(f"🎉 Bem-vindo de volta, {usuario}!")
+                        st.rerun()
+                    else:
+                        st.error("Usuário ou senha incorretos!")
+                except Exception as e:
+                    st.error(f"Erro no banco: {e}")
+            else:
+                st.warning("Preencha todos os campos!")
+        
+        st.write("---")
+        if st.button("Não tem uma conta? Cadastre-se aqui!"):
+            st.session_state.tela_atual = "cadastro"
+            st.rerun()
+
+    # --- TELA DE CADASTRO (COM FOTO DE PERFIL) ---
+    elif st.session_state.tela_atual == "cadastro":
+        st.title("📝 Criar Conta - EXV Mini-Games")
+        st.write("Crie o seu perfil para jogar com a turma!")
+
+        novo_usuario = st.text_input("Escolha um Usuário / Nickname:", key="cad_user").strip()
+        nova_senha = st.text_input("Escolha uma Senha:", type="password", key="cad_pass")
+        confirmar_senha = st.text_input("Confirme a Senha:", type="password", key="cad_pass_conf")
+        
+        # Campo de Upload da Foto de Perfil
+        foto_enviada = st.file_uploader("Escolha sua Foto de Perfil (Para o Cara a Cara):", type=["png", "jpg", "jpeg"])
+
+        if st.button("Criar Minha Conta"):
+            if novo_usuario and nova_senha and confirmar_senha:
+                if nova_senha != confirmar_senha:
+                    st.error("As senhas não coincidem!")
+                elif not foto_enviada:
+                    st.error("Por favor, selecione uma foto de perfil! Ela é obrigatória para o jogo Cara a Cara.")
                 else:
-                    st.error("Usuário ou senha incorretos. Tente novamente!")
-            except Exception as e:
-                st.error(f"Erro ao conectar ao banco de dados: {e}")
-        else:
-            st.warning("Preencha todos os campos!")
+                    try:
+                        # 1. Verifica se o usuário já existe
+                        existente = supabase.table("perfis_jogos_exv").select("*").eq("username", novo_usuario).execute()
+                        
+                        if len(existente.data) > 0:
+                            st.error("Esse usuário já existe! Escolha outro nome.")
+                        else:
+                            # 2. Faz o upload da foto para o Storage (Bucket) do Supabase
+                            extensao = foto_enviada.name.split(".")[-1]
+                            nome_arquivo_storage = f"{novo_usuario}_perfil.{extensao}"
+                            bytes_da_foto = foto_enviada.getvalue()
+                            
+                            supabase.storage.from_("fotos_perfil").upload(
+                                path=nome_arquivo_storage,
+                                file=bytes_da_foto,
+                                file_options={"content-type": foto_enviada.type, "upsert": "true"}
+                            )
+                            
+                            # 3. Pega a URL pública da foto enviada
+                            foto_url = supabase.storage.from_("fotos_perfil").get_public_url(nome_arquivo_storage)
+                            
+                            # 4. Salva o registro completo na tabela perfis_jogos_exv
+                            dados_novos = {
+                                "username": novo_usuario, 
+                                "senha": nova_senha,
+                                "foto_url": foto_url
+                            }
+                            supabase.table("perfis_jogos_exv").insert(dados_novos).execute()
+                            
+                            st.success("🎉 Conta criada com sucesso com foto de perfil! Faça seu login.")
+                            st.session_state.tela_atual = "login"
+                            st.rerun()
+                    except Exception as e:
+                        st.error(f"Erro ao salvar cadastro ou imagem: {e}")
+            else:
+                st.warning("Por favor, preencha todos os campos!")
 
-# --- ÁREA LOGADA (SÓ ENTRA SE O LOGIN FOR SUCESSO) ---
+        if st.button("Voltar para a tela de Login"):
+            st.session_state.tela_atual = "login"
+            st.rerun()
+
+# --- ÁREA DOS JOGOS (SÓ ACESSA LOGADO) ---
 else:
     st.sidebar.write(f"🎮 Jogador: **{st.session_state.username_atual}**")
     if st.sidebar.button("Sair / Logout"):
@@ -55,22 +126,21 @@ else:
         st.rerun()
 
     st.title("🎮 EXV Portal de Mini-Games")
-    st.write(f"Olá {st.session_state.username_atual}! Você está pronto para o multiplayer?")
-
-    # Menu de seleção de jogos
+    st.write(f"Olá, {st.session_state.username_atual}!")
+    
     jogo_escolhido = st.selectbox(
         "Escolha o modo de jogo:",
-        ["Selecione...", "🔤 Jogo da Forca", "⚔️ Próximo Jogo (Multiplayer)"]
+        ["Selecione...", "🔤 Jogo da Forca", "👤 Cara a Cara (Multiplayer)"]
     )
-
+    
     if jogo_escolhido == "🔤 Jogo da Forca":
-        st.write("Aqui vai o código da sua Forca que já criamos!")
-        # (Depois colamos a lógica da forca aqui dentro)
-
-    elif jogo_escolhido == "⚔️ Próximo Jogo (Multiplayer)":
-        st.header("⚔️ Arena Multiplayer")
-        st.write("Espaço reservado para o jogo síncrono por turnos!")
-                    
+        st.subheader("🔤 Jogo da Forca EXV")
+        st.write("(Sua lógica da forca funciona aqui normalmente!)")
+        
+    elif jogo_escolhido == "👤 Cara a Cara (Multiplayer)":
+        st.subheader("👤 Cara a Cara EXV")
+        st.write("A base de dados de fotos está pronta! Vamos programar as regras agora.")
+        
 # -------------------------------------------------------------------
 # LÓGICA DO JOGO DA VELHA VERSÃO HASHTAG (#)
 # -------------------------------------------------------------------
