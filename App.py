@@ -333,7 +333,7 @@ else:
                             resposta_sala = supabase.table("jogadores").select("*").eq("sala", nome_sala_teste).execute()
                             qtd_jogadores = len(resposta_sala.data) if resposta_sala.data else 0
                             
-                            if qtd_jogadores < 4:  -- Cabe até 4 ou mais jogadores por sala
+                            if qtd_jogadores < 4:  # Cabe até 4 ou mais jogadores por sala
                                 sala_encontrada = nome_sala_teste
                             else:
                                 numero_da_sala += 1
