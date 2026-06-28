@@ -1,13 +1,17 @@
 import streamlit as st
 from supabase import create_client, Client
 import random
+import numpy as np
+from scipy.io import wavfile
+import io
+import time
 
-st.set_page_config(page_title="EXV Mini-Games", page_icon="🎮", layout="centered")
+st.set_page_config(page_title="EXV Portal de Mini-Games", page_icon="🎮", layout="centered")
 
 # --- CONFIGURAÇÃO DO SUPABASE ---
-# Coloque aqui as suas credenciais reais do projeto!
-URL_SUPABASE = "https://ldjtqgeyorkzbvuichjj.supabase.co"
-CHAVE_SUPABASE = "sb_publishable_ZWY9Hp6kQrhOzff6xc_DrA_8TlnrqQ_"
+# Use as suas credenciais reais (as do Quem é Quem ou as principais)
+URL_SUPABASE = "https://tuymyyxguujeuxwgrssm.supabase.co"
+CHAVE_SUPABASE = "sb_publishable_mE_GPQgHRnkF1bp241SkyA_Ijynueb5"
 
 @st.cache_resource
 def conectar_supabase():
@@ -15,13 +19,51 @@ def conectar_supabase():
 
 supabase = conectar_supabase()
 
-# Inicializa as variáveis de sessão essenciais
+# --- FUNÇÃO DO MODIFICADOR DE VOZ (QUEM É QUEM) ---
+def aplicar_modificador_voz(audio_bytes, efeito):
+    try:
+        samplerate, data = wavfile.read(io.BytesIO(audio_bytes))
+        if len(data.shape) > 1:
+            data = data[:, 0]  # Converte estéreo para mono
+
+        if efeito == "🦹‍♂️ Vilão (Grave)":
+            novo_samplerate = int(samplerate * 0.70)
+        elif efeito == "🐿️ Esquilo (Fino)":
+            novo_samplerate = int(samplerate * 1.45)
+        elif efeito == "🤖 Robô / Ciborgue":
+            rhythm = np.sin(2 * np.pi * np.arange(len(data)) * 60 / samplerate)
+            data = (data * rhythm).astype(data.dtype)
+            novo_samplerate = samplerate
+        else:
+            novo_samplerate = samplerate
+
+        buffer_saida = io.BytesIO()
+        wavfile.write(buffer_saida, novo_samplerate, data)
+        return buffer_saida.getvalue()
+    except Exception as e:
+        st.error(f"Erro ao processar modificador de voz: {e}")
+        return audio_bytes
+
+# Inicializa as variáveis de sessão essenciais do portal
 if "usuario_logado" not in st.session_state:
     st.session_state.usuario_logado = None
 if "username_atual" not in st.session_state:
     st.session_state.username_atual = None
 if "tela_atual" not in st.session_state:
     st.session_state.tela_atual = "login"
+
+# Estados internos do Cara a Cara
+if "sala_id" not in st.session_state:
+    st.session_state.sala_id = None
+    st.session_state.meu_numero = None
+    st.session_state.eliminados = set()
+
+# Estados internos do Quem é Quem
+if "qq_sala" not in st.session_state:
+    st.session_state.qq_sala = ""
+    st.session_state.qq_nome_real = ""
+    st.session_state.qq_turma = ""
+    st.session_state.qq_registrado = False
 
 # --- FLUXO DE AUTENTICAÇÃO (SÓ ABRE SE NÃO ESTIVER LOGADO) ---
 if st.session_state.usuario_logado is None:
@@ -115,20 +157,19 @@ else:
         st.rerun()
 
     st.title("🎮 EXV Portal de Mini-Games")
-    st.write(f"Olá, {st.session_state.username_atual}!")
     
     jogo_escolhido = st.selectbox(
         "Escolha o modo de jogo:",
-        ["Selecione...", "🔤 Jogo da Forca", "👤 Cara a Cara (Multiplayer)"]
+        ["Selecione...", "🔤 Jogo da Forca", "👤 Cara a Cara (Multiplayer)", "🕵️‍♂️ Quem é Quem? (Walkie-Talkie)"]
     )
     
-    # --- JOGO DA FORCA ---
+    # ================= JOGO 1: FORCA =================
     if jogo_escolhido == "🔤 Jogo da Forca":
         st.subheader("🔤 Jogo da Forca EXV")
         
-        modo_forca = st.radio("Modo de Jogo:", ["Palavras Aleatórias", "Digitar Palavra Secre"], horizontal=True)
+        modo_forca = st.radio("Modo de Jogo:", ["Palavras Aleatórias", "Digitar Palavra Secreta"], horizontal=True)
 
-        if modo_forca == "Digitar Palavra Secre":
+        if modo_forca == "Digitar Palavra Secreta":
             palavra_custom = st.text_input("Palavra secreta (em segredo):", type="password").upper().strip()
             if st.button("Definir Palavra Secreta"):
                 if palavra_custom:
@@ -185,142 +226,239 @@ else:
             st.session_state.tentativas_restantes = 6
             st.rerun()
         
-        # --- CARA A CARA MULTIPLAYER ---
+    # ================= JOGO 2: CARA A CARA =================
     elif jogo_escolhido == "👤 Cara a Cara (Multiplayer)":
-        st.subheader("👤 Cara a Cara EXV — Multiplayer")
+        st.subheader("👤 Cara a Cara EXV — Tabuleiro com Fotos")
         
-        # --- LÓGICA DE SALAS MULTIPLAYER ---
-        if "sala_id" not in st.session_state:
-            st.session_state.sala_id = None
-            st.session_state.meu_numero = None # 1 ou 2
-            st.session_state.eliminados = set() # Guarda quem o jogador clicou para "abaixar"
-
-        # Se não estiver em nenhuma sala, mostra opções de Criar ou Entrar
         if st.session_state.sala_id is None:
             col_sala1, col_sala2 = st.columns(2)
-            
             with col_sala1:
                 if st.button("🆕 Criar Nova Sala"):
                     try:
                         nova_sala = supabase.table("partidas_cara_a_cara").insert({
-                            "jogador_1": st.session_state.username_atual,
-                            "status": "aguardando",
-                            "turno": st.session_state.username_atual
+                            "jogador_1": st.session_state.username_atual, "status": "aguardando", "turno": st.session_state.username_atual
                         }).execute()
                         if len(nova_sala.data) > 0:
                             st.session_state.sala_id = nova_sala.data[0]["id"]
                             st.session_state.meu_numero = 1
                             st.rerun()
                     except Exception as e:
-                        st.error(f"Erro ao criar sala: {e}")
+                        st.error(f"Erro: {e}")
 
             with col_sala2:
                 st.write("**Salas Disponíveis:**")
                 try:
                     salas_abertas = supabase.table("partidas_cara_a_cara").select("*").eq("status", "aguardando").execute()
-                    if len(salas_abertas.data) == 0:
-                        st.caption("Nenhuma sala aberta no momento. Crie uma!")
+                    if len(salas_abertas.data) == 0: st.caption("Nenhuma sala aberta.")
                     for sala in salas_abertas.data:
                         if sala["jogador_1"] != st.session_state.username_atual:
-                            if st.button(f"Entrar na Sala de {sala['jogador_1']}", key=f"sala_{sala['id']}"):
-                                supabase.table("partidas_cara_a_cara").update({
-                                    "jogador_2": st.session_state.username_atual,
-                                    "status": "jogando"
-                                }).eq("id", sala["id"]).execute()
+                            if st.button(f"Entrar na Sala de {sala['jogador_1']}", key=f"s_{sala['id']}"):
+                                supabase.table("partidas_cara_a_cara").update({"jogador_2": st.session_state.username_atual, "status": "jogando"}).eq("id", sala["id"]).execute()
                                 st.session_state.sala_id = sala["id"]
                                 st.session_state.meu_numero = 2
                                 st.rerun()
-                except Exception as e:
-                    st.error(f"Erro ao buscar salas: {e}")
-
-        # --- SE JÁ ESTIVER DENTRO DE UMA SALA ---
+                except Exception as e: st.error(f"Erro: {e}")
         else:
             try:
-                # Atualiza os dados da sala em tempo real
                 dados_sala = supabase.table("partidas_cara_a_cara").select("*").eq("id", st.session_state.sala_id).execute().data[0]
             except:
-                st.error("Sala não encontrada.")
-                if st.button("Voltar ao Menu"):
-                    st.session_state.sala_id = None
-                    st.rerun()
-                st.stop()
+                st.session_state.sala_id = None
+                st.rerun()
 
-            # Botão de emergência para abandonar a partida
             if st.sidebar.button("🏳️ Sair da Partida"):
                 supabase.table("partidas_cara_a_cara").update({"status": "finalizado"}).eq("id", st.session_state.sala_id).execute()
                 st.session_state.sala_id = None
                 st.session_state.eliminados = set()
                 st.rerun()
 
-            # Status da Sala
             if dados_sala["status"] == "aguardando":
-                st.warning("⏳ Aguardando um oponente entrar na sala...")
-                if st.button("🔄 Atualizar Tela"):
-                    st.rerun()
-            
+                st.warning("⏳ Aguardando oponente...")
+                if st.button("🔄 Atualizar"): st.rerun()
             elif dados_sala["status"] == "jogando":
                 oponente = dados_sala["jogador_2"] if st.session_state.meu_numero == 1 else dados_sala["jogador_1"]
-                st.write(f"⚔️ Você está duelando contra: **{oponente}**")
+                st.write(f"⚔️ Oponente: **{oponente}**")
                 
-                # Mostra o Turno Atual
-                if dados_sala["turno"] == st.session_state.username_atual:
-                    st.success("🟢 É a sua vez de fazer uma pergunta ou chutar!")
-                else:
-                    st.warning(f"🟡 Vez de **{dados_sala['turno']}** jogar...")
-                    if st.button("🔄 Conferir se já é minha vez"):
-                        st.rerun()
+                if dados_sala["turno"] == st.session_state.username_atual: st.success("🟢 Sua vez!")
+                else: 
+                    st.warning(f"🟡 Vez de {dados_sala['turno']}")
+                    if st.button("🔄 Atualizar Turno"): st.rerun()
 
                 st.write("---")
-
-                # --- BUSCA TODOS OS PERFIS PARA MONTAR O TABULEIRO ---
                 try:
                     todos_perfis = supabase.table("perfis_jogos_exv").select("username", "foto_url").execute().data
-                except Exception as e:
-                    st.error(f"Erro ao carregar os rostos: {e}")
-                    todos_perfis = []
+                except: todos_perfis = []
 
-                # --- DESENHA O TABULEIRO VISUAL (GRADE DE CARTAS) ---
                 st.markdown("### 🎴 Seu Tabuleiro de Suspeitos")
-                st.caption("Clique no botão abaixo da foto para 'abaixar' ou 'levantar' a carta do amigo!")
-
-                # Criamos uma grade com 4 colunas (fica ótimo no celular e PC)
                 colunas_tabuleiro = st.columns(4)
-                
                 for indice, perfil in enumerate(todos_perfis):
                     nome_suspeito = perfil["username"]
                     url_foto = perfil["foto_url"]
-                    
-                    # Identifica em qual das 4 colunas a carta vai ficar
                     com_coluna = colunas_tabuleiro[indice % 4]
-                    
                     with com_coluna:
                         esta_eliminado = nome_suspeito in st.session_state.eliminados
-                        
                         if esta_eliminado:
-                            # Efeito visual de carta virada/escura
                             st.markdown(f"<div style='opacity: 0.25; text-align: center;'>👤<br><b>{nome_suspeito}</b></div>", unsafe_url_allowed=True)
                             if st.button("🔼 Levantar", key=f"up_{nome_suspeito}_{indice}"):
                                 st.session_state.eliminados.remove(nome_suspeito)
                                 st.rerun()
                         else:
-                            # Mostra a foto real do banco de dados
-                            if url_foto:
-                                st.image(url_foto, use_container_width=True)
-                            else:
-                                st.subheader("👤")
-                            st.markdown(f"<p style='text-align: center; margin-bottom: 2px;'><b>{nome_suspeito}</b></p>", unsafe_url_allowed=True)
-                            
-                            if st.button("🔻 Abaixar", key=f"down_{nome_suspeito}_{indice}"):
+                            if url_foto: st.image(url_foto, use_container_width=True)
+                            else: st.subheader("👤")
+                            st.markdown(f"<p style='text-align: center;'><b>{nome_suspeito}</b></p>", unsafe_url_allowed=True)
+                            if st.button("🔻 Abaixar", key=f"dw_{nome_suspeito}_{indice}"):
                                 st.session_state.eliminados.add(nome_suspeito)
                                 st.rerun()
-                
-                st.write("---")
-                # --- SISTEMA DE CHUTE (JÁ SABE QUEM É?) ---
-                st.markdown("### 👁️ Já sabe quem é?")
-                chute = st.selectbox("Escolha o seu palpite certeiro:", ["Selecione..."] + [p["username"] for p in todos_perfis], key="campo_chute")
-                
-                if st.button("🚨 Dar Palpite Final!"):
-                    if chute != "Selecione...":
-                        st.info(f"Você chutou que o personagem secreto é o **{chute}**!")
-                        # Na próxima etapa vamos checar se acertou contra o 'secreto' guardado na tabela!
+
+    # ================= JOGO 3: QUEM É QUEM (WALKIE-TALKIE) =================
+    elif jogo_escolhido == "🕵️‍♂️ Quem é Quem? (Walkie-Talkie)":
+        st.subheader("🕵️‍♂️ Jogo: Quem é Quem? Anônimo")
+        
+        # Se não configurou a sala de teleporte do grupo ainda
+        if not st.session_state.qq_registrado:
+            st.markdown("Combine um **Nome de Grupo** com seus amigos para o sistema colocar vocês na mesma sala!")
+            nome_real_investigador = st.text_input("Seu Nome Verdadeiro (Ficará 100% oculto dos outros):", placeholder="Ex: Rafael").strip()
+            grupo_turma = st.text_input("Nome do Grupo ou Turma (Mesmo nome para a galera):", placeholder="Ex: GrupoDoRafa").strip()
+            
+            if st.button("Entrar no Jogo (Teleportar) 🌀"):
+                if nome_real_investigador == "" or grupo_turma == "":
+                    st.error("Preencha todos os campos!")
+                else:
+                    try:
+                        sala_encontrada = ""
+                        numero_da_sala = 1
+                        grupo_limpo = grupo_turma.upper()
                         
+                        while sala_encontrada == "":
+                            nome_sala_teste = f"{grupo_limpo} - SALA {numero_da_sala}"
+                            resposta_sala = supabase.table("jogadores").select("*").eq("sala", nome_sala_teste).execute()
+                            qtd_jogadores = len(resposta_sala.data) if resposta_sala.data else 0
+                            
+                            if qtd_jogadores < 4:  -- Cabe até 4 ou mais jogadores por sala
+                                sala_encontrada = nome_sala_teste
+                            else:
+                                numero_da_sala += 1
+                        
+                        # Cadastra o jogador usando o Nick do Login do Portal de forma automática!
+                        supabase.table("jogadores").insert({
+                            "nick": st.session_state.username_atual, 
+                            "sala": sala_encontrada,
+                            "nome_real": nome_real_investigador,
+                            "turma": grupo_limpo
+                        }).execute()
+                        
+                        st.session_state.qq_sala = sala_encontrada
+                        st.session_state.qq_nome_real = nome_real_investigador
+                        st.session_state.qq_turma = grupo_limpo
+                        st.session_state.qq_registrado = True
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Erro ao entrar na sala do Quem é Quem: {e}")
+        
+        # Painel do Jogo Ativo
+        else:
+            st.write(f"🏠 Grupo: **{st.session_state.qq_turma}** | Sala: **{st.session_state.qq_sala}**")
+            st.write(f"Seu Nick Secreto (Identidade Visual): **{st.session_state.username_atual}**")
+            
+            try:
+                parceiros = supabase.table("jogadores").select("nick").eq("sala", st.session_state.qq_sala).execute()
+                lista_nicks = [p['nick'] for p in parceiros.data] if parceiros.data else []
+                if lista_nicks: st.caption(f"🕵️‍♂️ Suspeitos conectados nesta sala: {', '.join(lista_nicks)}")
+            except: pass
+
+            aba_pistas, aba_palpites, aba_regras = st.tabs(["💬 Modo Walkie-Talkie / Chat", "🚨 Dar Palpite", "📜 Regras"])
+            
+            # --- ABA 1: CHAT ---
+            with aba_pistas:
+                modo_comunicacao = st.radio("Como deseja enviar sua pista?", ["Texto Tradicional", "🎤 Ligação Walkie-Talkie (Anônima)"], horizontal=True)
+                
+                if modo_comunicacao == "Texto Tradicional":
+                    pergunta = st.text_input("Sua Pista por texto:", placeholder="Escreva aqui...", key="input_pista")
+                    if st.button("Enviar Pista por Texto"):
+                        if pergunta.strip() != "":
+                            supabase.table("mensagens").insert({
+                                "jogador": st.session_state.username_atual, "texto": pergunta.strip(), "sala": st.session_state.qq_sala
+                            }).execute()
+                            st.toast("Pista enviada! 🚀")
+                            st.rerun()
+                else:
+                    st.markdown("### 🎙️ Central do Walkie-Talkie")
+                    efeito = st.selectbox("Escolha seu disfarce de voz:", ["Voz Normal", "🦹‍♂️ Vilão (Grave)", "🐿️ Esquilo (Fino)", "🤖 Robô / Ciborgue"])
+                    audio_capturado = st.audio_input("Grave seu áudio de pista:")
+                    
+                    if audio_capturado is not None:
+                        bytes_originais = audio_capturado.read()
+                        if st.button("🚀 Enviar Áudio com Disfarce", use_container_width=True):
+                            try:
+                                with st.spinner("Modificando voz... ⚡"):
+                                    bytes_modificados = aplicar_modificador_voz(bytes_originais, efeito)
+                                    nome_arq = f"audio_{int(time.time())}_{st.session_state.username_atual}.wav"
+                                    
+                                    supabase.storage.from_("audios_jogo").upload(path=nome_arq, file=bytes_modificados, file_options={"content-type": "audio/wav"})
+                                    url_som_publica = supabase.storage.from_("audios_jogo").get_public_url(nome_arq)
+                                    
+                                    supabase.table("mensagens").insert({
+                                        "jogador": st.session_state.username_atual, "texto": f"📢 [Mensagem de Voz - Disfarce: {efeito}]", "audio_url": url_som_publica, "sala": st.session_state.qq_sala
+                                    }).execute()
+                                    st.success("Áudio enviado!")
+                                    st.rerun()
+                            except Exception as e: st.error(f"Erro: {e}")
+                
+                st.markdown("---")
+                st.subheader("📋 Histórico de Pistas Recentes")
+                try:
+                    historico = supabase.table("mensagens").select("*").eq("sala", st.session_state.qq_sala).order("created_at", desc=True).execute()
+                    if historico.data:
+                        for msg in historico.data:
+                            with st.container(border=True):
+                                st.markdown(f"**🕵️‍♂️ Pista recebida:**")
+                                st.write(msg['texto'])
+                                if msg.get('audio_url'): st.audio(msg['audio_url'], format="audio/wav")
+                    else: st.write("Nenhuma pista enviada ainda.")
+                except: st.write("Aguardando novas pistas...")
+
+            # --- ABA 2: PALPITES ---
+            with aba_palpites:
+                st.subheader("Quem você acha que é?")
+                nick_suspeito = st.text_input("Nick Secreto do Suspeito:", placeholder="Ex: rafael12", key="nick_s").strip()
+                palpite_nome_real = st.text_input("Qual o Nome Verdadeiro dele?", placeholder="Ex: Rafael", key="nome_s").strip()
+                
+                if st.button("Lançar Palpite Oficial 🚨"):
+                    if nick_suspeito and palpite_nome_real:
+                        try:
+                            busca = supabase.table("jogadores").select("nome_real").eq("sala", st.session_state.qq_sala).eq("nick", nick_suspeito).execute()
+                            resultado_status = "❌ ERROU"
+                            if busca.data:
+                                if busca.data[0]['nome_real'].lower() == palpite_nome_real.lower():
+                                    resultado_status = "💥 ACERTOU EM CHEIO! DESMASCARADO!"
+                            
+                            supabase.table("palpites").insert({
+                                "acusador": st.session_state.username_atual, "suspeito": f"{nick_suspeito} ({palpite_nome_real})", "palpite": resultado_status, "sala": st.session_state.qq_sala
+                            }).execute()
+                            
+                            if "💥" in resultado_status: st.balloons(); st.success(resultado_status)
+                            else: st.error(resultado_status)
+                            st.rerun()
+                        except Exception as e: st.error(f"Erro: {e}")
+
+                st.markdown("---")
+                st.subheader("📢 Histórico de Acusações")
+                try:
+                    lista_palpites = supabase.table("palpites").select("*").eq("sala", st.session_state.qq_sala).order("created_at", desc=True).execute()
+                    for pal in lista_palpites.data:
+                        if "💥" in pal['palpite']: st.success(f"💥 **{pal['acusador']}** desmascarou o suspeito!")
+                        else: st.warning(f"🕵️‍♂️ **{pal['acusador']}** acusou **{pal['suspeito']}** ➔ {pal['palpite']}")
+                except: st.write("Sem acusações feitas.")
+
+            # --- ABA 3: REGRAS ---
+            with aba_regras:
+                st.subheader("📜 Como Jogar")
+                st.markdown("1. Digite seu nome real e o nome do seu grupo.\n2. Mande áudios anônimos usando o Walkie-Talkie com modificador de voz.\n3. Descubra o nome real por trás do Nick de cada colega!")
+
+            if st.button("🚪 Sair do Quem é Quem"):
+                try: supabase.table("jogadores").delete().eq("nick", st.session_state.username_atual).eq("sala", st.session_state.qq_sala).execute()
+                except: pass
+                st.session_state.qq_registrado = False
+                st.rerun()
+
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("💻 **Desenvolvido por Rafael Lessa**")
