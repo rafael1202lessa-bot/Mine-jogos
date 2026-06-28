@@ -46,16 +46,29 @@ if jogo_escolhido == "❌ Jogo da Velha":
             else:
                 st.session_state.turno = "O" if st.session_state.turno == "X" else "X"
 
-        # --- MONTAGEM DO TABULEIRO # ---
-    # Criamos as 3 linhas do jogo. O loop garante que elas fiquem lado a lado no mobile.
+            # --- MONTAGEM DO TABULEIRO # COM FORÇADO PARA CELULAR ---
+    # Esse bloco injeta um código invisível que obriga as colunas a ficarem lado a lado no celular
+    st.markdown(
+        """
+        <style>
+        [data-testid="stHorizontalBlock"] {
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: nowrap !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+    # Agora desenhamos o tabuleiro usando o mesmo estilo
     for i in range(3):
-        cols = st.columns(3, gap="small") # O gap="small" economiza espaço nas laterais
+        cols = st.columns(3)
         for j in range(3):
             index = i * 3 + j
             txt_botao = st.session_state.tabuleiro[index]
             label = txt_botao if txt_botao != " " else "  "
             
-            # Renderiza o botão na coluna correspondente
             cols[j].button(
                 label, 
                 key=f"b_{index}", 
@@ -64,10 +77,9 @@ if jogo_escolhido == "❌ Jogo da Velha":
                 use_container_width=True
             )
         
-        # Só coloca a linha divisória horizontal entre a linha 0 e 1, e entre a 1 e 2
         if i < 2:
             st.markdown("---")
-            
+                 
     # Linha 2 do #
     col4, col5, col6 = st.columns(3)
     with col4: st.button(st.session_state.tabuleiro[3] if st.session_state.tabuleiro[3] != " " else "  ", key="b3", on_click=clique_botao, args=(3,), use_container_width=True)
