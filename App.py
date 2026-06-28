@@ -313,15 +313,18 @@ else:
     elif jogo_escolhido == "🕵️‍♂️ Quem é Quem? (Walkie-Talkie)":
         st.subheader("🕵️‍♂️ Jogo: Quem é Quem? Anônimo")
         
-        # Se não configurou a sala de teleporte do grupo ainda
+                # Se não configurou a sala de teleporte do grupo ainda
         if not st.session_state.qq_registrado:
-            st.markdown("Combine um **Nome de Grupo** com seus amigos para o sistema colocar vocês na mesma sala!")
+            st.markdown("Combine um **Nome de Grupo** com seus amigos para entrar na mesma sala de investigação!")
+            
+            # AGORA SIM: Campo para escolher o Nick Falso/Secreto da partida!
+            nick_falso_partida = st.text_input("Escolha seu Nick Secreto para esta partida (Falso):", placeholder="Ex: NinjaAnonimo").strip()
             nome_real_investigador = st.text_input("Seu Nome Verdadeiro (Ficará 100% oculto dos outros):", placeholder="Ex: Rafael").strip()
             grupo_turma = st.text_input("Nome do Grupo ou Turma (Mesmo nome para a galera):", placeholder="Ex: GrupoDoRafa").strip()
             
             if st.button("Entrar no Jogo (Teleportar) 🌀"):
-                if nome_real_investigador == "" or grupo_turma == "":
-                    st.error("Preencha todos os campos!")
+                if nick_falso_partida == "" or nome_real_investigador == "" or grupo_turma == "":
+                    st.error("Preencha todos os campos obrigatórios!")
                 else:
                     try:
                         sala_encontrada = ""
@@ -333,11 +336,29 @@ else:
                             resposta_sala = supabase.table("jogadores").select("*").eq("sala", nome_sala_teste).execute()
                             qtd_jogadores = len(resposta_sala.data) if resposta_sala.data else 0
                             
-                            if qtd_jogadores < 4:  # Cabe até 4 ou mais jogadores por sala
+                            if qtd_jogadores < 4:
                                 sala_encontrada = nome_sala_teste
                             else:
                                 numero_da_sala += 1
                         
+                        # Cadastra no banco usando o Nick Falso que você escolheu!
+                        supabase.table("jogadores").insert({
+                            "nick": nick_falso_partida, 
+                            "sala": sala_encontrada,
+                            "nome_real": nome_real_investigador,
+                            "turma": grupo_limpo
+                        }).execute()
+                        
+                        # Salva o nick falso no estado para usar no chat e áudios
+                        st.session_state.username_atual_quem_e_quem = nick_falso_partida
+                        st.session_state.qq_sala = sala_encontrada
+                        st.session_state.qq_nome_real = nome_real_investigador
+                        st.session_state.qq_turma = grupo_limpo
+                        st.session_state.qq_registrado = True
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Erro ao entrar na sala do Quem é Quem: {e}")
+                          
                         # Cadastra o jogador usando o Nick do Login do Portal de forma automática!
                         supabase.table("jogadores").insert({
                             "nick": st.session_state.username_atual, 
