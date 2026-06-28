@@ -20,34 +20,20 @@ def conectar_supabase():
 supabase = conectar_supabase()
 
 # ==============================================================================
-# 🌐 CENTRAL DE ESTADOS GLOBAIS (SESSION STATE)
+# 🌐 CENTRAL DE ESTADOS GLOBAIS (COLE ISSO APÓS A CONFIGURAÇÃO DO SUPABASE)
 # ==============================================================================
-# Autenticação e Portal Geral
 if "username_atual" not in st.session_state: st.session_state.username_atual = None
 
-# Jogo 2: Cara a Cara
-if "cara_modo" not in st.session_state: st.session_state.cara_modo = None  # 'online' ou 'solo'
+# Jogo: Cara a Cara
+if "cara_modo" not in st.session_state: st.session_state.cara_modo = None
 if "bot_suspeito" not in st.session_state: st.session_state.bot_suspeito = None
 if "sala_id" not in st.session_state: st.session_state.sala_id = None
 if "meu_numero" not in st.session_state: st.session_state.meu_numero = None
 if "eliminados" not in st.session_state: st.session_state.eliminados = set()
 
-# Jogo 3: Quem é Quem
-if "qq_registrado" not in st.session_state: st.session_state.qq_registrado = False
-if "username_atual_quem_e_quem" not in st.session_state: st.session_state.username_atual_quem_e_quem = ""
-if "qq_sala" not in st.session_state: st.session_state.qq_sala = ""
-if "qq_nome_real" not in st.session_state: st.session_state.qq_nome_real = ""
-if "qq_turma" not in st.session_state: st.session_state.qq_turma = ""
-
-# Jogo 4: UNO
-if "uno_modo" not in st.session_state: st.session_state.uno_modo = None  # 'online' ou 'solo'
+# Jogo: UNO
+if "uno_modo" not in st.session_state: st.session_state.uno_modo = None
 if "uno_sala_id" not in st.session_state: st.session_state.uno_sala_id = None
-if "uno_meu_numero" not in st.session_state: st.session_state.uno_meu_numero = None
-if "minhas_cartas" not in st.session_state: st.session_state.minhas_cartas = []
-if "bot_cartas_uno" not in st.session_state: st.session_state.bot_cartas_uno = []
-if "mesa_carta" not in st.session_state: st.session_state.mesa_carta = ""
-if "mesa_cor" not in st.session_state: st.session_state.mesa_cor = ""
-if "uno_turno" not in st.session_state: st.session_state.uno_turno = "jogador"
 # ==============================================================================
 
 # --- FUNÇÃO DO MODIFICADOR DE VOZ (QUEM É QUEM) ---
@@ -254,64 +240,6 @@ else:
             st.session_state.tentativas_restantes = 6
             st.rerun()
         
-    # ================= JOGO 2: CARA A CARA =================
-    elif jogo_escolhido == "👤 Cara a Cara (Multiplayer)":
-        st.subheader("👤 Cara a Cara EXV — Tabuleiro com Fotos")
-        
-        if st.session_state.sala_id is None:
-            col_sala1, col_sala2 = st.columns(2)
-            with col_sala1:
-                if st.button("🆕 Criar Nova Sala"):
-                    try:
-                        nova_sala = supabase.table("partidas_cara_a_cara").insert({
-                            "jogador_1": st.session_state.username_atual, "status": "aguardando", "turno": st.session_state.username_atual
-                        }).execute()
-                        if len(nova_sala.data) > 0:
-                            st.session_state.sala_id = nova_sala.data[0]["id"]
-                            st.session_state.meu_numero = 1
-                            st.rerun()
-                    except Exception as e:
-                        st.error(f"Erro: {e}")
-
-            with col_sala2:
-                st.write("**Salas Disponíveis:**")
-                try:
-                    salas_abertas = supabase.table("partidas_cara_a_cara").select("*").eq("status", "aguardando").execute()
-                    if len(salas_abertas.data) == 0: st.caption("Nenhuma sala aberta.")
-                    for sala in salas_abertas.data:
-                        if sala["jogador_1"] != st.session_state.username_atual:
-                            if st.button(f"Entrar na Sala de {sala['jogador_1']}", key=f"s_{sala['id']}"):
-                                supabase.table("partidas_cara_a_cara").update({"jogador_2": st.session_state.username_atual, "status": "jogando"}).eq("id", sala["id"]).execute()
-                                st.session_state.sala_id = sala["id"]
-                                st.session_state.meu_numero = 2
-                                st.rerun()
-                except Exception as e: st.error(f"Erro: {e}")
-        else:
-            try:
-                dados_sala = supabase.table("partidas_cara_a_cara").select("*").eq("id", st.session_state.sala_id).execute().data[0]
-            except:
-                st.session_state.sala_id = None
-                st.rerun()
-
-            if st.sidebar.button("🏳️ Sair da Partida"):
-                supabase.table("partidas_cara_a_cara").update({"status": "finalizado"}).eq("id", st.session_state.sala_id).execute()
-                st.session_state.sala_id = None
-                st.session_state.eliminados = set()
-                st.rerun()
-
-            if dados_sala["status"] == "aguardando":
-                st.warning("⏳ Aguardando oponente...")
-                if st.button("🔄 Atualizar"): st.rerun()
-            elif dados_sala["status"] == "jogando":
-                oponente = dados_sala["jogador_2"] if st.session_state.meu_numero == 1 else dados_sala["jogador_1"]
-                st.write(f"⚔️ Oponente: **{oponente}**")
-                
-                if dados_sala["turno"] == st.session_state.username_atual: st.success("🟢 Sua vez!")
-                else: 
-                    st.warning(f"🟡 Vez de {dados_sala['turno']}")
-                    if st.button("🔄 Atualizar Turno"): st.rerun()
-
-                st.write("---")
     # ================= JOGO 2: CARA A CARA =================
     elif jogo_escolhido == "👤 Cara a Cara (Multiplayer)":
         st.subheader("👤 Cara a Cara EXV — Tabuleiro Clássico")
