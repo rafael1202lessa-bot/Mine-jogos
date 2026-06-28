@@ -113,15 +113,76 @@ if jogo_escolhido == "❌ Jogo da Velha":
         st.rerun()
                                                                                                                                                  
 # -------------------------------------------------------------------
-# LÓGICA DO JOGO DA FORCA (ESPAÇO RESERVADO)
+# LÓGICA DO JOGO DA FORCA
 # -------------------------------------------------------------------
 elif jogo_escolhido == "🔤 Jogo da Forca":
-    st.header("🔤 Jogo da Forca")
-    st.write("Em breve! Vamos programar esse em seguida com palavras secretas da turma.")
+    st.header("🔤 Jogo da Forca EXV")
+    
+    import random
 
-# -------------------------------------------------------------------
-# JOGO INVENTADO POR VOCÊ (ESPAÇO RESERVADO)
-# -------------------------------------------------------------------
-elif jogo_escolhido == "💡 Meu Jogo Inventado":
-    st.header("💡 Jogo Inventado pelo Rafa")
-    st.write("Aqui vai entrar a sua imaginação! Qual é a ideia desse jogo?")
+    # 1. Lista de palavras secretas da turma (Pode alterar ou adicionar mais!)
+    if "lista_palavras" not in st.session_state:
+        st.session_state.lista_palavras = ["KAUNNY", "RAFAEL", "MEXICO", "CHAT", "ESCOLA", "AMIGOS"]
+
+    # 2. Inicializa as variáveis do jogo na memória
+    if "palavra_secreta" not in st.session_state:
+        st.session_state.palavra_secreta = random.choice(st.session_state.lista_palavras)
+        st.session_state.letras_descobertas = set()
+        st.session_state.letras_erradas = set()
+        st.session_state.tentativas_restantes = 6
+
+    palavra = st.session_state.palavra_secreta
+    erradas = st.session_state.letras_erradas
+    descobertas = st.session_state.letras_descobertas
+
+    # 3. Desenha a palavra na tela (ex: R _ F _ _ L)
+    palavra_mascarada = ""
+    for letra in palavra:
+        if letra in descobertas:
+            palavra_mascarada += letra + " "
+        else:
+            palavra_mascarada += "_ "
+            
+    st.markdown(f"### Palavra: `{palavra_mascarada.strip()}`")
+    st.write(f"❤️ Tentativas restantes: **{st.session_state.tentativas_restantes}**")
+    
+    if erradas:
+        st.write(f"❌ Letras erradas: {', '.join(sorted(list(erradas)))}")
+
+    # 4. Verifica se o jogo acabou
+    ganhou = all(letra in descobertas for letra in palavra)
+    perdeu = st.session_state.tentativas_restantes <= 0
+
+    if ganhou:
+        st.success(f"🎉 Parabéns! Você acertou a palavra: **{palavra}**!")
+    elif perdeu:
+        st.error(f"💥 Game Over! A palavra era: **{palavra}**.")
+    else:
+        # Campo para o jogador chutar uma letra
+        letra_chute = st.text_input("Chute uma letra:", max_chars=1, key="input_letra").upper()
+        
+        if st.button("Verificar Letra"):
+            if letra_chute:
+                if letra_chute in descobertas or letra_chute in erradas:
+                    st.warning("Você já tentou essa letra!")
+                elif letra_chute in palavra:
+                    st.session_state.letras_descobertas.add(letra_chute)
+                    st.success("Acertou a letra!")
+                    st.rerun()
+                else:
+                    st.session_state.letras_erradas.add(letra_chute)
+                    st.session_state.tentativas_restantes -= 1
+                    st.error("Letra errada!")
+                    st.rerun()
+            else:
+                st.info("Digite uma letra antes de clicar.")
+
+    # 5. Botão para reiniciar com uma nova palavra
+    st.write("---")
+    if st.button("Nova Palavra / Reiniciar Forca"):
+        st.session_state.palavra_secreta = random.choice(st.session_state.lista_palavras)
+        st.session_state.letras_descobertas = set()
+        st.session_state.letras_erradas = set()
+        st.session_state.tentativas_restantes = 6
+        st.rerun()
+    
