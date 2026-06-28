@@ -5,8 +5,8 @@ st.set_page_config(page_title="EXV Mini-Games", page_icon="🎮", layout="center
 
 # 1. Configuração de conexão com o seu Supabase
 # Substitua pelas suas credenciais reais do projeto do Chat EXV!
-URL_SUPABASE = "SUA_URL_DO_SUPABASE_AQUI"
-CHAVE_SUPABASE = "SUA_CHAVE_ANON_DO_SUPABASE_AQUI"
+URL_SUPABASE = "https://ldjtqgeyorkzbvuichjj.supabase.co"
+CHAVE_SUPABASE = "sb_publishable_ZWY9Hp6kQrhOzff6xc_DrA_8TlnrqQ_"
 
 @st.cache_resource
 def conectar_supabase():
