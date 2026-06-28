@@ -475,19 +475,19 @@ else:
                 st.subheader("📜 Como Jogar")
                 st.markdown("1. Digite seu nome real e o nome do seu grupo.\n2. Mande áudios anônimos usando o Walkie-Talkie com modificador de voz.\n3. Descubra o nome real por trás do Nick de cada colega!")
 
+                        # --- FINAL DO QUEM É QUEM (JOGO 3) ---
             if st.button("🚪 Sair do Quem é Quem"):
-                try: supabase.table("jogadores").delete().eq("nick", st.session_state.username_atual).eq("sala", st.session_state.qq_sala).execute()
-                except: pass
+                try: 
+                    supabase.table("jogadores").delete().eq("nick", st.session_state.username_atual).eq("sala", st.session_state.qq_sala).execute()
+                except: 
+                    pass
                 st.session_state.qq_registrado = False
                 st.rerun()
 
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("💻 **Desenvolvido por Rafael Lessa**")
-    
     # ================= JOGO 4: UNO MULTIPLAYER =================
     elif jogo_escolhido == "🃏 Jogo do UNO (Multiplayer)":
         st.subheader("🃏 UNO EXV — Multiplayer em Tempo Real")
-        
+     
         # Inicializa estados do UNO na sessão
         if "uno_sala_id" not in st.session_state:
             st.session_state.uno_sala_id = None
