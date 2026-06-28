@@ -59,7 +59,7 @@ if jogo_escolhido == "❌ Jogo da Velha":
     col4, col5, col6 = st.columns(3)
     with col4: st.button(st.session_state.tabuleiro[3] if st.session_state.tabuleiro[3] != " " else "  ", key="b3", on_click=clique_botao, args=(3,), use_container_width=True)
     with col5: st.button(st.session_state.tabuleiro[4] if st.session_state.tabuleiro[4] != " " else "  ", key="b4", on_click=clique_botao, args=(4,), use_container_width=True)
-    with col6: st.button(st.session_state.tabuleiro[5] if st.session_state.tabuleiro[5] != " " else "  ", key="b5", on_click=cl_click_botao, args=(5,), use_container_width=True)
+    with col6: st.button(st.session_state.tabuleiro[5] if st.session_state.tabuleiro[5] != " " else "  ", key="b5", on_click=clique_botao, args=(5,), use_container_width=True)
     
     st.markdown("---") # Outra linha horizontal do #
 
