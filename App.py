@@ -18,6 +18,36 @@ def conectar_supabase():
     return create_client(URL_SUPABASE, CHAVE_SUPABASE)
 
 supabase = conectar_supabase()
+# ==============================================================================
+# 🌐 CENTRAL DE ESTADOS GLOBAIS (SESSION STATE)
+# ==============================================================================
+# Autenticação e Portal Geral
+if "username_atual" not in st.session_state: st.session_state.username_atual = None
+
+# Jogo 2: Cara a Cara
+if "cara_modo" not in st.session_state: st.session_state.cara_modo = None  # 'online' ou 'solo'
+if "bot_suspeito" not in st.session_state: st.session_state.bot_suspeito = None
+if "sala_id" not in st.session_state: st.session_state.sala_id = None
+if "meu_numero" not in st.session_state: st.session_state.meu_numero = None
+if "eliminados" not in st.session_state: st.session_state.eliminados = set()
+
+# Jogo 3: Quem é Quem
+if "qq_registrado" not in st.session_state: st.session_state.qq_registrado = False
+if "username_atual_quem_e_quem" not in st.session_state: st.session_state.username_atual_quem_e_quem = ""
+if "qq_sala" not in st.session_state: st.session_state.qq_sala = ""
+if "qq_nome_real" not in st.session_state: st.session_state.qq_nome_real = ""
+if "qq_turma" not in st.session_state: st.session_state.qq_turma = ""
+
+# Jogo 4: UNO
+if "uno_modo" not in st.session_state: st.session_state.uno_modo = None  # 'online' ou 'solo'
+if "uno_sala_id" not in st.session_state: st.session_state.uno_sala_id = None
+if "uno_meu_numero" not in st.session_state: st.session_state.uno_meu_numero = None
+if "minhas_cartas" not in st.session_state: st.session_state.minhas_cartas = []
+if "bot_cartas_uno" not in st.session_state: st.session_state.bot_cartas_uno = []
+if "mesa_carta" not in st.session_state: st.session_state.mesa_carta = ""
+if "mesa_cor" not in st.session_state: st.session_state.mesa_cor = ""
+if "uno_turno" not in st.session_state: st.session_state.uno_turno = "jogador"
+# ==============================================================================
 
 # --- FUNÇÃO DO MODIFICADOR DE VOZ (QUEM É QUEM) ---
 def aplicar_modificador_voz(audio_bytes, efeito):
