@@ -483,6 +483,7 @@ else:
 
     st.sidebar.markdown("---")
     st.sidebar.markdown("💻 **Desenvolvido por Rafael Lessa**")
+    
     # ================= JOGO 4: UNO MULTIPLAYER =================
     elif jogo_escolhido == "🃏 Jogo do UNO (Multiplayer)":
         st.subheader("🃏 UNO EXV — Multiplayer em Tempo Real")
