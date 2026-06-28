@@ -160,7 +160,7 @@ else:
     
     jogo_escolhido = st.selectbox(
         "Escolha o modo de jogo:",
-        ["Selecione...", "🔤 Jogo da Forca", "👤 Cara a Cara (Multiplayer)", "🕵️‍♂️ Quem é Quem? (Walkie-Talkie)"]
+        ["Selecione...", "🔤 Jogo da Forca", "👤 Cara a Cara (Multiplayer)", "🕵️‍♂️ Quem é Quem? (Walkie-Talkie)", "🃏 uno exv (multiplayer) "]
     )
     
     # ================= JOGO 1: FORCA =================
