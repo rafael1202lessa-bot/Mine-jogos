@@ -185,9 +185,142 @@ else:
             st.session_state.tentativas_restantes = 6
             st.rerun()
         
-    # --- CARA A CARA ---
+        # --- CARA A CARA MULTIPLAYER ---
     elif jogo_escolhido == "👤 Cara a Cara (Multiplayer)":
-        st.subheader("👤 Cara a Cara EXV")
-        st.write("A base de dados de fotos e contas está 100% pronta!")
-        st.info("Próximo passo: programar a lógica de turnos e o tabuleiro de rostos.")
+        st.subheader("👤 Cara a Cara EXV — Multiplayer")
+        
+        # --- LÓGICA DE SALAS MULTIPLAYER ---
+        if "sala_id" not in st.session_state:
+            st.session_state.sala_id = None
+            st.session_state.meu_numero = None # 1 ou 2
+            st.session_state.eliminados = set() # Guarda quem o jogador clicou para "abaixar"
+
+        # Se não estiver em nenhuma sala, mostra opções de Criar ou Entrar
+        if st.session_state.sala_id is None:
+            col_sala1, col_sala2 = st.columns(2)
+            
+            with col_sala1:
+                if st.button("🆕 Criar Nova Sala"):
+                    try:
+                        nova_sala = supabase.table("partidas_cara_a_cara").insert({
+                            "jogador_1": st.session_state.username_atual,
+                            "status": "aguardando",
+                            "turno": st.session_state.username_atual
+                        }).execute()
+                        if len(nova_sala.data) > 0:
+                            st.session_state.sala_id = nova_sala.data[0]["id"]
+                            st.session_state.meu_numero = 1
+                            st.rerun()
+                    except Exception as e:
+                        st.error(f"Erro ao criar sala: {e}")
+
+            with col_sala2:
+                st.write("**Salas Disponíveis:**")
+                try:
+                    salas_abertas = supabase.table("partidas_cara_a_cara").select("*").eq("status", "aguardando").execute()
+                    if len(salas_abertas.data) == 0:
+                        st.caption("Nenhuma sala aberta no momento. Crie uma!")
+                    for sala in salas_abertas.data:
+                        if sala["jogador_1"] != st.session_state.username_atual:
+                            if st.button(f"Entrar na Sala de {sala['jogador_1']}", key=f"sala_{sala['id']}"):
+                                supabase.table("partidas_cara_a_cara").update({
+                                    "jogador_2": st.session_state.username_atual,
+                                    "status": "jogando"
+                                }).eq("id", sala["id"]).execute()
+                                st.session_state.sala_id = sala["id"]
+                                st.session_state.meu_numero = 2
+                                st.rerun()
+                except Exception as e:
+                    st.error(f"Erro ao buscar salas: {e}")
+
+        # --- SE JÁ ESTIVER DENTRO DE UMA SALA ---
+        else:
+            try:
+                # Atualiza os dados da sala em tempo real
+                dados_sala = supabase.table("partidas_cara_a_cara").select("*").eq("id", st.session_state.sala_id).execute().data[0]
+            except:
+                st.error("Sala não encontrada.")
+                if st.button("Voltar ao Menu"):
+                    st.session_state.sala_id = None
+                    st.rerun()
+                st.stop()
+
+            # Botão de emergência para abandonar a partida
+            if st.sidebar.button("🏳️ Sair da Partida"):
+                supabase.table("partidas_cara_a_cara").update({"status": "finalizado"}).eq("id", st.session_state.sala_id).execute()
+                st.session_state.sala_id = None
+                st.session_state.eliminados = set()
+                st.rerun()
+
+            # Status da Sala
+            if dados_sala["status"] == "aguardando":
+                st.warning("⏳ Aguardando um oponente entrar na sala...")
+                if st.button("🔄 Atualizar Tela"):
+                    st.rerun()
+            
+            elif dados_sala["status"] == "jogando":
+                oponente = dados_sala["jogador_2"] if st.session_state.meu_numero == 1 else dados_sala["jogador_1"]
+                st.write(f"⚔️ Você está duelando contra: **{oponente}**")
+                
+                # Mostra o Turno Atual
+                if dados_sala["turno"] == st.session_state.username_atual:
+                    st.success("🟢 É a sua vez de fazer uma pergunta ou chutar!")
+                else:
+                    st.warning(f"🟡 Vez de **{dados_sala['turno']}** jogar...")
+                    if st.button("🔄 Conferir se já é minha vez"):
+                        st.rerun()
+
+                st.write("---")
+
+                # --- BUSCA TODOS OS PERFIS PARA MONTAR O TABULEIRO ---
+                try:
+                    todos_perfis = supabase.table("perfis_jogos_exv").select("username", "foto_url").execute().data
+                except Exception as e:
+                    st.error(f"Erro ao carregar os rostos: {e}")
+                    todos_perfis = []
+
+                # --- DESENHA O TABULEIRO VISUAL (GRADE DE CARTAS) ---
+                st.markdown("### 🎴 Seu Tabuleiro de Suspeitos")
+                st.caption("Clique no botão abaixo da foto para 'abaixar' ou 'levantar' a carta do amigo!")
+
+                # Criamos uma grade com 4 colunas (fica ótimo no celular e PC)
+                colunas_tabuleiro = st.columns(4)
+                
+                for indice, perfil in enumerate(todos_perfis):
+                    nome_suspeito = perfil["username"]
+                    url_foto = perfil["foto_url"]
+                    
+                    # Identifica em qual das 4 colunas a carta vai ficar
+                    com_coluna = colunas_tabuleiro[indice % 4]
+                    
+                    with com_coluna:
+                        esta_eliminado = nome_suspeito in st.session_state.eliminados
+                        
+                        if esta_eliminado:
+                            # Efeito visual de carta virada/escura
+                            st.markdown(f"<div style='opacity: 0.25; text-align: center;'>👤<br><b>{nome_suspeito}</b></div>", unsafe_url_allowed=True)
+                            if st.button("🔼 Levantar", key=f"up_{nome_suspeito}_{indice}"):
+                                st.session_state.eliminados.remove(nome_suspeito)
+                                st.rerun()
+                        else:
+                            # Mostra a foto real do banco de dados
+                            if url_foto:
+                                st.image(url_foto, use_container_width=True)
+                            else:
+                                st.subheader("👤")
+                            st.markdown(f"<p style='text-align: center; margin-bottom: 2px;'><b>{nome_suspeito}</b></p>", unsafe_url_allowed=True)
                             
+                            if st.button("🔻 Abaixar", key=f"down_{nome_suspeito}_{indice}"):
+                                st.session_state.eliminados.add(nome_suspeito)
+                                st.rerun()
+                
+                st.write("---")
+                # --- SISTEMA DE CHUTE (JÁ SABE QUEM É?) ---
+                st.markdown("### 👁️ Já sabe quem é?")
+                chute = st.selectbox("Escolha o seu palpite certeiro:", ["Selecione..."] + [p["username"] for p in todos_perfis], key="campo_chute")
+                
+                if st.button("🚨 Dar Palpite Final!"):
+                    if chute != "Selecione...":
+                        st.info(f"Você chutou que o personagem secreto é o **{chute}**!")
+                        # Na próxima etapa vamos checar se acertou contra o 'secreto' guardado na tabela!
+                        
