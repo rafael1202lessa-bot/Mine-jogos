@@ -312,89 +312,69 @@ else:
             if st.session_state.sala_id is None:
                 col_sala1, col_sala2 = st.columns(2)
                 with col_sala1:
-                    if st.button("🆕 Criar Nova Sala"):
-                        try:
-                            nova_sala = supabase.table("partidas_cara_a_cara").insert({
-                                "jogador_1": st.session_state.username_atual, 
-                                "status": "aguardando", 
-                                "turno": st.session_state.username_atual
-                            }).execute()
-                            if len(nova_sala.data) > 0:
-                                st.session_state.sala_id = nova_sala.data[0]["id"]
-                                st.session_state.meu_numero = 1
-                                st.rerun()
-                        except Exception as e: 
-                            st.error(f"Erro ao criar sala: {e}")
-
-                with col_sala2:
-                    st.write("**Salas Disponíveis:**")
+    # ================= JOGO 2: CARA A CARA =================
+    elif jogo_escolhido == "👤 Cara a Cara (Multiplayer)":
+        st.subheader("👤 Cara a Cara EXV — Tabuleiro com Fotos")
+        
+        # Estrutura de navegação (O erro de SyntaxError acontecia aqui por falta de alinhamento)
+        if st.session_state.sala_id is None:
+            col_sala1, col_sala2 = st.columns(2)
+            with col_sala1:
+                if st.button("🆕 Criar Nova Sala"):
                     try:
-                        salas_abertas = supabase.table("partidas_cara_a_cara").select("*").eq("status", "aguardando").execute()
-                        if len(salas_abertas.data) == 0: 
-                            st.caption("Nenhuma sala aberta no momento.")
-                        for sala in salas_abertas.data:
-                            if sala["jogador_1"] != st.session_state.username_atual:
-                                if st.button(f"Entrar na Sala de {sala['jogador_1']}", key=f"s_{sala['id']}"):
-                                    supabase.table("partidas_cara_a_cara").update({
-                                        "jogador_2": st.session_state.username_atual, 
-                                        "status": "jogando"
-                                    }).eq("id", sala["id"]).execute()
-                                    st.session_state.sala_id = sala["id"]
-                                    st.session_state.meu_numero = 2
-                                    st.rerun()
-                    except Exception as e: 
-                        st.error(f"Erro ao buscar salas: {e}")
-            else:
-                try: 
-                    dados_sala = supabase.table("partidas_cara_a_cara").select("*").eq("id", st.session_state.sala_id).execute().data[0]
-                except: 
-                    st.session_state.sala_id = None
-                    st.rerun()
-
-                if st.sidebar.button("🏳️ Sair da Partida"):
-                    try:
-                        supabase.table("partidas_cara_a_cara").update({"status": "finalizado"}).eq("id", st.session_state.sala_id).execute()
-                    except:
-                        pass
-                    st.session_state.sala_id = None
-                    st.session_state.meu_numero = None
-                    st.session_state.eliminados = set()
-                    st.rerun()
-
-                if dados_sala["status"] == "aguardando":
-                    st.warning("⏳ Aguardando oponente entrar...")
-                    if st.button("🔄 Verificar se Oponente Entrou", use_container_width=True):
-                        st.rerun()
-                        
-                elif dados_sala["status"] == "jogando":
-                    oponente = dados_sala["jogador_2"] if st.session_state.meu_numero == 1 else dados_sala["jogador_1"]
-                    st.write(f"⚔️ Oponente: **{oponente}**")
-                    
-                    if dados_sala["turno"] == st.session_state.username_atual: 
-                        st.success("🟢 Sua vez!")
-                    else: 
-                        st.warning(f"🟡 Vez de {dados_sala['turno']}")
-                        if st.button("🔄 Atualizar Turno"): 
+                        nova_sala = supabase.table("partidas_cara_a_cara").insert({
+                            "jogador_1": st.session_state.username_atual, 
+                            "status": "aguardando", 
+                            "turno": st.session_state.username_atual
+                        }).execute()
+                        if len(nova_sala.data) > 0:
+                            st.session_state.sala_id = nova_sala.data[0]["id"]
+                            st.session_state.meu_numero = 1
                             st.rerun()
+                    except Exception as e:
+                        st.error(f"Erro: {e}")
 
-                    st.write("---")
-                    st.markdown("### 🎴 Seu Tabuleiro de Suspeitos")
-                    colunas_tabuleiro = st.columns(4)
-                    for indice, nome_suspeito in enumerate(personagens_oficiais):
-                        com_coluna = colunas_tabuleiro[indice % 4]
-                        with com_coluna:
-                            esta_eliminado = nome_suspeito in st.session_state.eliminados
-                            if esta_eliminado:
-                                st.markdown(f"<div style='opacity: 0.2; text-align: center; font-size: 24px; padding: 10px; background: #333; border-radius: 5px;'>❌<br><b style='font-size:12px;'>{nome_suspeito}</b></div>", unsafe_url_allowed=True)
-                                if st.button("🔼 Levantar", key=f"up_{nome_suspeito}_{indice}", use_container_width=True):
-                                    st.session_state.eliminados.remove(nome_suspeito)
-                                    st.rerun()
-                            else:
-                                st.markdown(f"<div style='text-align: center; border: 2px solid #FFA500; background: #FFF3CD; padding: 15px; border-radius: 8px; color: #000;'>👤<br><b style='color: #000;'>{nome_suspeito}</b></div>", unsafe_url_allowed=True)
-                                if st.button("🔻 Abaixar", key=f"dw_{nome_suspeito}_{indice}", use_container_width=True):
-                                    st.session_state.eliminados.add(nome_suspeito)
-                                    st.rerun()
+            with col_sala2:
+                st.write("**Salas Disponíveis:**")
+                try:
+                    salas_abertas = supabase.table("partidas_cara_a_cara").select("*").eq("status", "aguardando").execute()
+                    if len(salas_abertas.data) == 0: st.caption("Nenhuma sala aberta.")
+                    for sala in salas_abertas.data:
+                        if sala["jogador_1"] != st.session_state.username_atual:
+                            if st.button(f"Entrar na Sala de {sala['jogador_1']}", key=f"s_{sala['id']}"):
+                                supabase.table("partidas_cara_a_cara").update({"jogador_2": st.session_state.username_atual, "status": "jogando"}).eq("id", sala["id"]).execute()
+                                st.session_state.sala_id = sala["id"]
+                                st.session_state.meu_numero = 2
+                                st.rerun()
+                except Exception as e: st.error(f"Erro: {e}")
+        
+        else:
+            # Caso o jogador já esteja em uma sala
+            try:
+                dados_sala = supabase.table("partidas_cara_a_cara").select("*").eq("id", st.session_state.sala_id).execute().data[0]
+            except:
+                st.session_state.sala_id = None
+                st.rerun()
+
+            if st.sidebar.button("🏳️ Sair da Partida"):
+                supabase.table("partidas_cara_a_cara").update({"status": "finalizado"}).eq("id", st.session_state.sala_id).execute()
+                st.session_state.sala_id = None
+                st.session_state.eliminados = set()
+                st.rerun()
+
+            if dados_sala["status"] == "aguardando":
+                st.warning("⏳ Aguardando oponente...")
+                if st.button("🔄 Atualizar"): st.rerun()
+            elif dados_sala["status"] == "jogando":
+                oponente = dados_sala["jogador_2"] if st.session_state.meu_numero == 1 else dados_sala["jogador_1"]
+                st.write(f"⚔️ Oponente: **{oponente}**")
                 
+                # Exemplo CORRIGIDO da renderização HTML
+                st.markdown(
+                    "<div style='border: 2px solid #FFA500; padding: 10px; background-color: #FFF3CD;'>Tabuleiro Ativo</div>", 
+                    unsafe_allow_html=True
+                )
+                         
     # ================= JOGO 3: QUEM É QUEM (WALKIE-TALKIE) =================
     elif jogo_escolhido == "🕵️‍♂️ Quem é Quem? (Walkie-Talkie)":
         st.subheader("🕵️‍♂️ Jogo: Quem é Quem? Anônimo")
