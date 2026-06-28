@@ -18,6 +18,7 @@ def conectar_supabase():
     return create_client(URL_SUPABASE, CHAVE_SUPABASE)
 
 supabase = conectar_supabase()
+
 # ==============================================================================
 # 🌐 CENTRAL DE ESTADOS GLOBAIS (SESSION STATE)
 # ==============================================================================
