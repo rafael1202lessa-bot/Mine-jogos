@@ -288,7 +288,7 @@ else:
                     esta_eliminado = nome_suspeito in st.session_state.eliminados
                     if esta_eliminado:
                                 st.markdown(f"<div style='opacity: 0.2; text-align: center; font-size: 24px; padding: 10px; background: #333; border-radius: 5px;'>❌<br><b style='font-size:12px;'>{nome_suspeito}</b></div>",unsafe_allow_html=True)
-                               else:
+                                else:
                                 st.markdown(
                                     f"<div style='text-align: center; border: 2px solid #FFA500; background: #FFF3CD; padding: 15px; border-radius: 8px; color: #000;'>👤<br><b style='color: #000;'>{nome_suspeito}</b></div>", 
                                     unsafe_allow_html=True
