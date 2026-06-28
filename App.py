@@ -483,3 +483,206 @@ else:
 
     st.sidebar.markdown("---")
     st.sidebar.markdown("💻 **Desenvolvido por Rafael Lessa**")
+    # ================= JOGO 4: UNO MULTIPLAYER =================
+    elif jogo_escolhido == "🃏 Jogo do UNO (Multiplayer)":
+        st.subheader("🃏 UNO EXV — Multiplayer em Tempo Real")
+        
+        # Inicializa estados do UNO na sessão
+        if "uno_sala_id" not in st.session_state:
+            st.session_state.uno_sala_id = None
+            st.session_state.uno_meu_numero = None
+            st.session_state.minhas_cartas = []
+
+        # --- SISTEMA DE LOGOBY / SALAS ---
+        if st.session_state.uno_sala_id is None:
+            col_u1, col_u2 = st.columns(2)
+            with col_u1:
+                if st.button("🆕 Criar Sala de UNO"):
+                    try:
+                        # Cria o baralho inicial e sorteia a primeira carta da mesa
+                        cores = ["Vermelho", "Azul", "Amarelo", "Verde"]
+                        valores = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+2", "Bloqueio", "Inverter"]
+                        baralho_completo = [f"{c} {v}" for c in cores for v in valores] + ["Coringa", "Coringa +4"] * 2
+                        
+                        carta_inicial = random.choice([c for c in baralho_completo if "Coringa" not in c])
+                        cor_inicial = carta_inicial.split()[0]
+                        
+                        # Sorteia as 7 cartas do Criador da Sala
+                        minhas_7 = [random.choice(baralho_completo) for _ in range(7)]
+                        st.session_state.minhas_cartas = minhas_7
+
+                        nova_sala = supabase.table("partidas_uno").insert({
+                            "jogador_1": st.session_state.username_atual,
+                            "status": "aguardando",
+                            "turno": st.session_state.username_atual,
+                            "carta_mesa": carta_inicial,
+                            "cor_atual": cor_inicial
+                        }).execute()
+                        
+                        if len(nova_sala.data) > 0:
+                            id_sala = nova_sala.data[0]["id"]
+                            st.session_state.uno_sala_id = id_sala
+                            st.session_state.uno_meu_numero = 1
+                            
+                            # Salva a mão inicial no banco
+                            supabase.table("maos_uno").insert({
+                                "sala_id": id_sala, "jogador": st.session_state.username_atual, "cartas": minhas_7
+                            }).execute()
+                            st.rerun()
+                    except Exception as e: st.error(f"Erro ao criar sala de UNO: {e}")
+
+            with col_u2:
+                st.write("**Salas de UNO esperando:**")
+                try:
+                    salas_uno = supabase.table("partidas_uno").select("*").eq("status", "aguardando").execute()
+                    if len(salas_uno.data) == 0: st.caption("Nenhuma sala de UNO aberta.")
+                    for sala in salas_uno.data:
+                        if sala["jogador_1"] != st.session_state.username_atual:
+                            if st.button(f"Jogar contra {sala['jogador_1']}", key=f"uno_{sala['id']}"):
+                                # Sorteia as 7 cartas do jogador 2
+                                cores = ["Vermelho", "Azul", "Amarelo", "Verde"]
+                                valores = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+2", "Bloqueio", "Inverter"]
+                                baralho_completo = [f"{c} {v}" for c in cores for v in valores] + ["Coringa", "Coringa +4"] * 2
+                                suas_7 = [random.choice(baralho_completo) for _ in range(7)]
+                                st.session_state.minhas_cartas = suas_7
+
+                                supabase.table("partidas_uno").update({
+                                    "jogador_2": st.session_state.username_atual, "status": "jogando"
+                                }).eq("id", sala["id"]).execute()
+                                
+                                supabase.table("maos_uno").insert({
+                                    "sala_id": sala["id"], "jogador": st.session_state.username_atual, "cartas": suas_7
+                                }).execute()
+
+                                st.session_state.uno_sala_id = sala["id"]
+                                st.session_state.uno_meu_numero = 2
+                                st.rerun()
+                except Exception as e: st.error(f"Erro ao buscar salas: {e}")
+        
+        # --- DENTRO DA PARTIDA DE UNO ---
+        else:
+            try:
+                dados_uno = supabase.table("partidas_uno").select("*").eq("id", st.session_state.uno_sala_id).execute().data[0]
+                # Puxa a mão atualizada do banco de dados
+                minha_mao_banco = supabase.table("maos_uno").select("cartas").eq("sala_id", st.session_state.uno_sala_id).eq("jogador", st.session_state.username_atual).execute().data[0]["cartas"]
+                st.session_state.minhas_cartas = minha_mao_banco
+            except:
+                st.session_state.uno_sala_id = None
+                st.rerun()
+
+            if st.sidebar.button("🏳️ Abandonar UNO"):
+                supabase.table("partidas_uno").update({"status": "finalizado"}).eq("id", st.session_state.uno_sala_id).execute()
+                st.session_state.uno_sala_id = None
+                st.rerun()
+
+            if dados_uno["status"] == "aguardando":
+                st.warning("⏳ Aguardando um amigo entrar na partida...")
+                if st.button("🔄 Atualizar"): st.rerun()
+            
+            elif dados_uno["status"] == "jogando":
+                oponente = dados_uno["jogador_2"] if st.session_state.uno_meu_numero == 1 else dados_uno["jogador_1"]
+                st.write(f"⚔️ Duelando contra: **{oponente}**")
+                
+                # Exibe a mesa
+                st.markdown("### 🎴 Mesa do Jogo")
+                carta_mesa = dados_uno["carta_mesa"]
+                cor_ativa = dados_uno["cor_atual"]
+                
+                # Estiliza a cor de fundo da mesa
+                cor_hex = "#DC3545" if cor_ativa == "Vermelho" else "#007BFF" if cor_ativa == "Azul" else "#FFC107" if cor_ativa == "Amarelo" else "#28A745"
+                texto_cor = "#000" if cor_ativa == "Amarelo" else "#FFF"
+                
+                st.markdown(f"""
+                <div style='background-color: {cor_hex}; padding: 25px; border-radius: 12px; text-align: center; color: {texto_cor}; font-size: 24px; font-weight: bold; border: 4px solid white;'>
+                    {carta_mesa}<br><span style='font-size: 14px;'>Cor Ativa: {cor_ativa}</span>
+                </div>
+                """, unsafe_url_allowed=True)
+                
+                # Turno
+                st.write("")
+                meu_turno = dados_uno["turno"] == st.session_state.username_atual
+                if meu_turno:
+                    st.success("🟢 É a SUA vez de jogar!")
+                else:
+                    st.warning(f"🟡 Vez de **{dados_uno['turno']}** jogar...")
+                    if st.button("🔄 Ver se já jogaram"): st.rerun()
+
+                st.write("---")
+                
+                # --- EXIBE AS CARTAS DO JOGADOR ---
+                st.markdown("### 🖐️ Sua Mão")
+                
+                # Botão de COMPRAR CARTA
+                if meu_turno:
+                    if st.button("📥 Comprar 1 Carta do Baralho", use_container_width=True):
+                        cores = ["Vermelho", "Azul", "Amarelo", "Verde"]
+                        valores = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+2", "Bloqueio", "Inverter"]
+                        baralho_completo = [f"{c} {v}" for c in cores for v in valores] + ["Coringa", "Coringa +4"] * 2
+                        nova_carta = random.choice(baralho_completo)
+                        
+                        nova_mao = st.session_state.minhas_cartas + [nova_carta]
+                        supabase.table("maos_uno").update({"cartas": nova_mao}).eq("sala_id", st.session_state.uno_sala_id).eq("jogador", st.session_state.username_atual).execute()
+                        
+                        # Passa o turno para o oponente
+                        supabase.table("partidas_uno").update({"turno": oponente}).eq("id", st.session_state.uno_sala_id).execute()
+                        st.success(f"Você comprou: {nova_carta}!")
+                        st.rerun()
+
+                # Listando as cartas em formato de botões organizados
+                colunas_cartas = st.columns(4)
+                for idx, carta in enumerate(st.session_state.minhas_cartas):
+                    col_idx = colunas_cartas[idx % 4]
+                    with col_idx:
+                        # Validação de regras do UNO
+                        pode_jogar = False
+                        if "Coringa" in carta:
+                            pode_jogar = True
+                        else:
+                            cor_carta = carta.split()[0]
+                            valor_carta = carta.split()[1] if len(carta.split()) > 1 else ""
+                            
+                            cor_mesa = carta_mesa.split()[0]
+                            valor_mesa = carta_mesa.split()[1] if len(carta_mesa.split()) > 1 else ""
+                            
+                            if cor_carta == cor_ativa or valor_carta == valor_mesa:
+                                p_jogar = True
+                                pode_jogar = True
+
+                        if st.button(f"{carta}", key=f"c_{idx}", disabled=not (meu_turno and pode_jogar), use_container_width=True):
+                            # LÓGICA DE DESCARTAR CARTA
+                            nova_mao = list(st.session_state.minhas_cartas)
+                            carta_jogada = nova_mao.pop(idx)
+                            
+                            # Define nova cor ativa
+                            nova_cor = cor_ativa
+                            if "Coringa" not in carta_jogada:
+                                nova_cor = carta_jogada.split()[0]
+                            else:
+                                # Se jogou Coringa, por padrão vamos mudar para uma cor aleatória ou padrão para simplificar nesta fase alpha
+                                nova_cor = random.choice(["Vermelho", "Azul", "Amarelo", "Verde"])
+                                st.toast(f"Coringa jogado! Cor alterada para {nova_cor} automaticamente!")
+
+                            # Checa Vitória (UNO!)
+                            if len(nova_mao) == 0:
+                                supabase.table("partidas_uno").update({"status": "finalizado", "turno": f"🏆 {st.session_state.username_atual} GANHOU!"}).eq("id", st.session_state.uno_sala_id).execute()
+                                st.balloons()
+                                st.success("Você Venceu o Jogo! 🏆")
+                            
+                            # Atualiza mão e mesa no Supabase
+                            supabase.table("maos_uno").update({"cartas": nova_mao}).eq("sala_id", st.session_state.uno_sala_id).eq("jogador", st.session_state.username_atual).execute()
+                            
+                            # Passa turno (+2 e Bloqueio podem ser implementados na próxima fase!)
+                            supabase.table("partidas_uno").update({
+                                "carta_mesa": carta_jogada,
+                                "cor_atual": nova_cor,
+                                "turno": oponente
+                            }).eq("id", st.session_state.uno_sala_id).execute()
+                            
+                            st.rerun()
+            
+            elif "GANHOU" in dados_uno["turno"]:
+                st.success(f"🎮 Fim de Jogo: {dados_uno['turno']}")
+                if st.button("Voltar ao Menu Principal"):
+                    st.session_state.uno_sala_id = None
+                    st.rerun()
+            
