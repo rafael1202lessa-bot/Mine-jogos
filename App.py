@@ -292,8 +292,9 @@ else:
                             st.session_state.eliminados.remove(nome_suspeito)
                             st.rerun()
                     else:
-                        st.markdown(f"<div style='text-align: center; border: 2px solid #FFA500; background: #FFF3CD; padding: 15px; border-radius: 8px; color: #000;'>👤<br><b style='color: #000;'>{nome_suspeito}</b></div>", unsafe_url_allowed=True)
-                        if st.button("🔻 Abaixar", key=f"dw_solo_{nome_suspeito}_{indice}", use_container_width=True):
+                        st.markdown(
+                    "<div style='border: 2px solid #FFA500; padding: 10px; background-color: #FFF3CD;'>Tabuleiro Ativo</div>",unsafe_allow_html=True)         
+                    if st.button("🔻 Abaixar", key=f"dw_solo_{nome_suspeito}_{indice}", use_container_width=True):
                             st.session_state.eliminados.add(nome_suspeito)
                             st.rerun()
 
