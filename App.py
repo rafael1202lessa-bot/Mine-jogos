@@ -46,15 +46,28 @@ if jogo_escolhido == "❌ Jogo da Velha":
             else:
                 st.session_state.turno = "O" if st.session_state.turno == "X" else "X"
 
-    # --- MONTAGEM DO TABULEIRO # ---
-    # Linha 1 do #
-    col1, col2, col3 = st.columns(3)
-    with col1: st.button(st.session_state.tabuleiro[0] if st.session_state.tabuleiro[0] != " " else "  ", key="b0", on_click=clique_botao, args=(0,), use_container_width=True)
-    with col2: st.button(st.session_state.tabuleiro[1] if st.session_state.tabuleiro[1] != " " else "  ", key="b1", on_click=clique_botao, args=(1,), use_container_width=True)
-    with col3: st.button(st.session_state.tabuleiro[2] if st.session_state.tabuleiro[2] != " " else "  ", key="b2", on_click=clique_botao, args=(2,), use_container_width=True)
-    
-    st.markdown("---") # Linha horizontal do #
-
+        # --- MONTAGEM DO TABULEIRO # ---
+    # Criamos as 3 linhas do jogo. O loop garante que elas fiquem lado a lado no mobile.
+    for i in range(3):
+        cols = st.columns(3, gap="small") # O gap="small" economiza espaço nas laterais
+        for j in range(3):
+            index = i * 3 + j
+            txt_botao = st.session_state.tabuleiro[index]
+            label = txt_botao if txt_botao != " " else "  "
+            
+            # Renderiza o botão na coluna correspondente
+            cols[j].button(
+                label, 
+                key=f"b_{index}", 
+                on_click=clique_botao, 
+                args=(index,), 
+                use_container_width=True
+            )
+        
+        # Só coloca a linha divisória horizontal entre a linha 0 e 1, e entre a 1 e 2
+        if i < 2:
+            st.markdown("---")
+            
     # Linha 2 do #
     col4, col5, col6 = st.columns(3)
     with col4: st.button(st.session_state.tabuleiro[3] if st.session_state.tabuleiro[3] != " " else "  ", key="b3", on_click=clique_botao, args=(3,), use_container_width=True)
