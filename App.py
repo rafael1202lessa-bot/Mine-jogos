@@ -1,23 +1,49 @@
 import streamlit as st
+import random
 
-def mostrar_mao_visual(mao):
-    st.subheader("Sua Mão")
-    # Usamos colunas para dispor as cartas lado a lado
-    colunas = st.columns(len(mao))
+# 1. Lógica do Jogo (O motor)
+class Uno:
+    def __init__(self):
+        cores = ["azul", "vermelho", "verde", "amarelo"]
+        valores = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "bloqueio", "inverso", "+2"]
+        self.deck = [{"cor": c, "valor": v} for c in cores for v in valores]
+        random.shuffle(self.deck)
+
+    def comprar_carta(self):
+        return self.deck.pop() if self.deck else None
+
+# 2. Interface Visual
+def renderizar_uno():
+    st.title("🃏 UNO EXV — Versão Visual")
     
-    for i, carta in enumerate(mao):
-        with colunas[i]:
-            # Nome do arquivo da imagem baseado na cor e valor
-            nome_arquivo = f"cartas/{carta['cor'].lower()}_{carta['valor'].lower()}.png"
-            
-            # O st.image funciona como um botão visual
-            # Se a pessoa clicar na imagem, o jogo entende como jogada
-            if st.image(nome_arquivo, use_column_width=True):
-                if st.button("Jogar esta", key=f"btn_{i}"):
-                    # Aqui entra a lógica de validar e jogar no Supabase
-                    st.write(f"Você jogou {carta['valor']} de {carta['cor']}")
-                    st.rerun()
+    if "jogo_iniciado" not in st.session_state:
+        st.session_state.engine = Uno()
+        st.session_state.mao = [st.session_state.engine.comprar_carta() for _ in range(7)]
+        st.session_state.mesa = st.session_state.engine.comprar_carta()
+        st.session_state.jogo_iniciado = True
 
-# --- Exemplo de como chamar no seu app ---
-# mao_jogador = [{"cor": "Azul", "valor": "5"}, {"cor": "Vermelho", "valor": "Bloqueio"}]
-# mostrar_mao_visual(mao_jogador)
+    # Exibição da Mesa
+    st.subheader("Carta na Mesa")
+    carta_mesa = st.session_state.mesa
+    # Aqui você usaria o caminho das suas imagens: f"cartas/{carta_mesa['cor']}_{carta_mesa['valor']}.png"
+    st.info(f"Carta atual: {carta_mesa['cor'].upper()} {carta_mesa['valor'].upper()}")
+
+    # Exibição da Mão
+    st.write("---")
+    st.subheader("Sua Mão")
+    cols = st.columns(4)
+    
+    for i, carta in enumerate(st.session_state.mao):
+        with cols[i % 4]:
+            # Criamos um botão com o nome da carta
+            # Para usar IMAGENS, substitua o botão por: st.image(f"caminho/{carta['cor']}_{carta['valor']}.png")
+            if st.button(f"{carta['cor']} {carta['valor']}", key=f"carta_{i}"):
+                if carta['cor'] == carta_mesa['cor'] or carta['valor'] == carta_mesa['valor']:
+                    st.session_state.mesa = st.session_state.mao.pop(i)
+                    st.rerun()
+                else:
+                    st.error("Jogada Inválida!")
+
+if __name__ == "__main__":
+    renderizar_uno()
+    
