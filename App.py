@@ -1,49 +1,23 @@
 import streamlit as st
-import random
 
-# --- Classe que gerencia a lógica do UNO ---
-class UnoGame:
-    def __init__(self):
-        self.cores = ["Vermelho", "Azul", "Verde", "Amarelo"]
-        self.valores = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "Bloqueio", "Inverso", "+2"]
-        self.deck = self.criar_deck()
-        
-    def criar_deck(self):
-        deck = []
-        for cor in self.cores:
-            for valor in self.valores:
-                deck.append({"cor": cor, "valor": valor})
-        random.shuffle(deck)
-        return deck
-
-# --- Interface Visual (Separada da lógica) ---
-def renderizar_jogo_uno():
-    st.title("🃏 UNO Multiplayer EXV")
+def mostrar_mao_visual(mao):
+    st.subheader("Sua Mão")
+    # Usamos colunas para dispor as cartas lado a lado
+    colunas = st.columns(len(mao))
     
-    if "uno_deck" not in st.session_state:
-        st.session_state.uno_deck = UnoGame().deck
-        st.session_state.minha_mao = [st.session_state.uno_deck.pop() for _ in range(7)]
-        st.session_state.mesa = [st.session_state.uno_deck.pop()]
-
-    # Layout Visual
-    st.subheader("Carta na Mesa")
-    carta = st.session_state.mesa[-1]
-    st.markdown(f"### {carta['cor']} - {carta['valor']}")
-
-    st.write("---")
-    st.subheader("Sua Mão:")
-    cols = st.columns(4)
-    for i, carta_mao in enumerate(st.session_state.minha_mao):
-        with cols[i % 4]:
-            if st.button(f"{carta_mao['cor']} {carta_mao['valor']}", key=f"c_{i}"):
-                # Lógica de validação (Simplificada)
-                if carta_mao['cor'] == carta['cor'] or carta_mao['valor'] == carta['valor']:
-                    st.session_state.mesa.append(st.session_state.minha_mao.pop(i))
-                    st.success("Carta jogada!")
+    for i, carta in enumerate(mao):
+        with colunas[i]:
+            # Nome do arquivo da imagem baseado na cor e valor
+            nome_arquivo = f"cartas/{carta['cor'].lower()}_{carta['valor'].lower()}.png"
+            
+            # O st.image funciona como um botão visual
+            # Se a pessoa clicar na imagem, o jogo entende como jogada
+            if st.image(nome_arquivo, use_column_width=True):
+                if st.button("Jogar esta", key=f"btn_{i}"):
+                    # Aqui entra a lógica de validar e jogar no Supabase
+                    st.write(f"Você jogou {carta['valor']} de {carta['cor']}")
                     st.rerun()
-                else:
-                    st.error("Jogada inválida!")
 
-if __name__ == "__main__":
-    renderizar_jogo_uno()
-    
+# --- Exemplo de como chamar no seu app ---
+# mao_jogador = [{"cor": "Azul", "valor": "5"}, {"cor": "Vermelho", "valor": "Bloqueio"}]
+# mostrar_mao_visual(mao_jogador)
